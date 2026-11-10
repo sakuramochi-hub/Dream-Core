@@ -1,0 +1,64 @@
+.scene-transition {
+  position: absolute;
+  z-index: 100;
+  /* The curtain lives on the fixed 1920x1080 game canvas, not inside the
+     clipped scene. Its small overscan is clipped by the canvas itself. */
+  inset: -2px;
+  background: #000;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate3d(100%, 0, 0);
+  transform-origin: center;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+.scene-transition.active { visibility: visible; }
+
+.slap-flash {
+  z-index: 8;
+  opacity: 0;
+  pointer-events: none;
+  background: rgba(255,255,255,0.72);
+}
+.slap-flash.play { animation: slap-flash var(--flash-duration, 240ms) ease-out; }
+.scene.shake { animation: scene-shake var(--shake-duration, 240ms) ease-in-out; }
+.scene-status { display: none; }
+
+@keyframes slap-flash {
+  0% { opacity: 0; }
+  15% { opacity: var(--flash-opacity, 0.85); }
+  100% { opacity: 0; }
+}
+@keyframes scene-shake {
+  0%, 100% { transform: translateX(0); }
+  18% { transform: translateX(calc(0px - var(--shake-strength, 7px))); }
+  38% { transform: translateX(var(--shake-strength, 7px)); }
+  58% { transform: translateX(calc(0px - var(--shake-strength, 7px))); }
+  78% { transform: translateX(var(--shake-strength, 7px)); }
+}
+
+
+/* Intro title shown at the beginning of each anomaly-search loop. */
+.loop-intro-screen {
+  position: absolute;
+  z-index: 110;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+.loop-intro-screen[hidden] { display: none; }
+.loop-intro-text {
+  margin: 0;
+  color: #fff;
+  font-size: var(--loop-intro-font-size, 56px);
+  font-weight: 500;
+  letter-spacing: .14em;
+  line-height: 1.4;
+  text-align: center;
+  text-shadow: 0 2px 18px rgba(255,255,255,.12);
+  white-space: pre-wrap;
+}

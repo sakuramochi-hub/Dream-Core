@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#303847">
+  <title>放課後の8回目</title>
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/layout.css">
+  <link rel="stylesheet" href="styles/dialogue.css">
+  <link rel="stylesheet" href="styles/character.css">
+  <link rel="stylesheet" href="styles/buttons.css">
+  <link rel="stylesheet" href="styles/effects.css">
+</head>
+<body>
+  <main id="game" class="game-shell">
+    <div id="game-canvas" class="game-canvas">
+    <header class="game-header">
+      <h1 id="game-title">放課後の8回目</h1>
+      <div id="debug-indicator" class="debug-indicator" hidden aria-live="polite"></div>
+    </header>
+
+    <section class="game-stage" aria-label="ゲーム画面">
+      <div id="scene" class="scene">
+        <div id="background-layer" class="background-layer" aria-hidden="true"></div>
+        <div id="character-layer" class="character-layer" aria-hidden="true"></div>
+        <div id="slap-flash" class="slap-flash" aria-hidden="true"></div>
+        <div id="scene-status" class="scene-status" aria-hidden="true"></div>
+
+        <div class="dialogue-stack">
+          <div id="judgment-panel" class="judgment-panel" hidden>
+            <button id="slap-button" class="slap-button" type="button">
+              <span id="slap-button-label">頬を叩く</span>
+            </button>
+          </div>
+
+          <section id="dialogue-panel" class="dialogue-panel" aria-live="polite">
+            <div class="dialogue-heading">
+              <span id="speaker-name" class="speaker-name"></span>
+              <span id="scene-tag" class="scene-tag"></span>
+            </div>
+            <p id="dialogue-text" class="dialogue-text"></p>
+          </section>
+        </div>
+
+        <section id="title-screen" class="title-screen">
+          <div id="title-screen-background" class="title-screen-background" aria-hidden="true"></div>
+          <h2 id="title-screen-title">放課後の8回目</h2>
+          <button id="start-button" class="primary-button" type="button">はじめる</button>
+        </section>
+
+        <section id="staff-roll-screen" class="staff-roll-screen" hidden aria-label="スタッフロール">
+          <div id="staff-roll-background" class="staff-roll-background" aria-hidden="true"></div>
+          <div id="staff-roll" class="staff-roll" aria-live="off"></div>
+        </section>
+
+        <section id="ending-screen" class="ending-screen" hidden>
+          <div id="ending-screen-background" class="ending-screen-background" aria-hidden="true"></div>
+          <h2 id="ending-screen-title">八つ目の放課後</h2>
+          <button id="title-button" class="primary-button" type="button">タイトルへ</button>
+        </section>
+        <div id="screen-transition-cover" class="screen-transition-cover" hidden aria-hidden="true"></div>
+        <section id="loop-intro-screen" class="loop-intro-screen" hidden aria-live="polite" aria-atomic="true">
+          <p id="loop-intro-text" class="loop-intro-text"></p>
+        </section>
+      </div>
+    </section>
+
+        <section id="options-screen" class="options-screen" hidden aria-labelledby="options-heading">
+          <div class="options-panel">
+            <h2 id="options-heading">オプション</h2>
+            <div class="options-audio-settings">
+              <div class="options-audio-setting">
+                <label for="bgm-volume-input">BGM</label>
+                <output id="bgm-volume-value" for="bgm-volume-input">10 / 10</output>
+                <input id="bgm-volume-input" type="range" min="0" max="10" step="1" value="10">
+              </div>
+              <div class="options-audio-setting">
+                <label for="se-volume-input">SE</label>
+                <output id="se-volume-value" for="se-volume-input">10 / 10</output>
+                <input id="se-volume-input" type="range" min="0" max="10" step="1" value="10">
+              </div>
+            </div>
+            <button id="options-close-button" class="primary-button" type="button">戻る</button>
+          </div>
+        </section>
+    <footer class="game-footer">
+      <div class="footer-controls">
+        <button id="speed-button" class="quiet-button" type="button" aria-pressed="false">倍速 OFF</button>
+        <button id="options-button" class="option-button" type="button" aria-label="オプション" aria-controls="options-screen" aria-expanded="false" title="オプション">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08A1.65 1.65 0 0 0 20.91 10H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+            <circle cx="12" cy="12" r="3.25" />
+          </svg>
+        </button>
+      </div>
+    </footer>
+      <div id="scene-transition" class="scene-transition" aria-hidden="true"></div>
+    </div>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

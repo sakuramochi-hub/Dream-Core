@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "assets": {
+    "backgrounds": {
+      "room": "assets/backgrounds/一人部屋３（日中）.jpg",
+      "town": "assets/backgrounds/住宅街２（日中）.jpg",
+      "school": "assets/backgrounds/学校のベンチ（日中）.jpg",
+      "cafe": "assets/backgrounds/喫茶店（日中）.jpg",
+      "mall": "assets/backgrounds/ショッピングモール.jpg",
+      "park": "assets/backgrounds/池のある公園（夕方）.jpg"
+    },
+    "characters": {
+      "heroine": {
+        "normal": "assets/characters/josei_07_a.png",
+        "smile": "assets/characters/josei_07_h.png",
+        "talk": "assets/characters/josei_07_b.png",
+        "surprised": "assets/characters/josei_07_d.png",
+        "shame": "assets/characters/josei_07_f.png",
+        "trouble": "assets/characters/josei_07_e.png"
+      },
+      "god": {
+        "normal": "assets/characters/teddybear_blue_a.png",
+        "angry": "assets/characters/teddybear_blue_e.png",
+        "smile": "assets/characters/teddybear_blue_b.png"
+      }
+    },
+    "audio": {
+      "bgm1": "assets/audio/日曜日のカフェ_2.mp3",
+      "bgm2": "assets/audio/枯れ葉_2.mp3",
+      "alarm": "assets/audio/目覚まし時計のアラーム.mp3",
+      "bgm3": "assets/audio/日常その４.mp3",
+      "harisen": "assets/audio/ビシッとツッコミ2.mp3"
+    }
+  },
+  "placeholders": {
+    "backgrounds": {
+      "room": "#4c596b",
+      "town": "#343d50",
+      "school": "#4c596b",
+      "cafe": "#4c596b",
+      "mall": "#4c596b",
+      "park": "#4c596b"
+    },
+    "characters": {
+      "heroine": "#b7a4ad",
+      "god": "#b7a4ad"
+    }
+  },
+  "characterSettings": {
+    "heroine": {
+      "scale": 200,
+      "offsetX": 0,
+      "offsetY": 600
+    },
+    "god": {
+      "scale": 150,
+      "offsetX": 0,
+      "offsetY": 0
+    }
+  }
+}
