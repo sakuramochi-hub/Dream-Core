@@ -17,30 +17,34 @@ export class CharacterRenderer {
     element.style.setProperty("--character-offset-y", `${offsetY}px`);
   }
 
+  cancelElementAnimations(element) {
+    for (const animation of element?.getAnimations?.() ?? []) animation.cancel();
+  }
+
   show({ id, expression = "default", position = "center" }) {
     this.removeExiting(id);
+
     const source = this.manifestLoader.getCharacter(id, expression);
-    const cachedImage = this.manifestLoader.getPreloadedCharacterImage?.(id, expression) ?? null;
+    // The preloader keeps a decoded Image alive, but that cache element is never
+    // mounted in the scene. Scene elements have their own animation lifecycle.
+    const isPreloaded = Boolean(this.manifestLoader.getPreloadedCharacterImage?.(id, expression));
     const previous = this.sprites.get(id);
     const shouldBeImage = Boolean(source);
     const previousIsImage = previous?.tagName === "IMG";
     const previousSource = previous?.dataset?.assetSource || null;
-    const sourceChanged = shouldBeImage && previousIsImage && !cachedImage && previousSource !== source;
-    const cachedImageChanged = Boolean(cachedImage && previous !== cachedImage);
+    const sameImageSource = shouldBeImage && previousIsImage && previousSource === source;
     const elementTypeChanged = Boolean(previous && shouldBeImage !== previousIsImage);
+    const replaceElement = !previous || elementTypeChanged || (shouldBeImage && !sameImageSource);
 
-    let element = cachedImage || previous;
-    if (!element || sourceChanged || cachedImageChanged || elementTypeChanged) {
+    let element = previous;
+    if (replaceElement) {
       if (previous) {
-        // A slow request may still dispatch its error event after its image has
-        // been replaced. Detach the old handler and make stale callbacks inert.
         previous.onerror = null;
         previous.onload = null;
+        this.cancelElementAnimations(previous);
         previous.remove();
       }
-      element = shouldBeImage
-        ? (cachedImage || document.createElement("img"))
-        : document.createElement("div");
+      element = shouldBeImage ? document.createElement("img") : document.createElement("div");
       element.dataset.characterId = id;
       if (shouldBeImage) {
         element.alt = "";
@@ -50,29 +54,31 @@ export class CharacterRenderer {
       this.sprites.set(id, element);
     }
 
-    const preloadClass = cachedImage ? " is-preloaded" : "";
-    element.className = `${shouldBeImage ? "character-sprite" : "character-placeholder"}${preloadClass} position-${position}`;
+    element.className = `${shouldBeImage ? "character-sprite" : "character-placeholder"}${isPreloaded ? " is-preloaded" : ""} position-${position}`;
     this.applyCharacterSettings(element, id);
+
     if (shouldBeImage) {
       const requestSource = source;
       element.onerror = () => {
-        // Ignore an error from a superseded expression or a sprite that is no
-        // longer the active image for this character.
         if (this.sprites.get(id) !== element) return;
         if (element.dataset.assetSource !== requestSource) return;
         console.error(`[CharacterRenderer] 立ち絵を読み込めません: ${requestSource}`);
         this.showPlaceholder(id, position);
       };
-      if (!cachedImage && element.src !== source) element.src = source;
+      if (element.src !== source) element.src = source;
     } else {
       element.style.backgroundColor = this.manifestLoader.getCharacterPlaceholder(id);
     }
+
     if (element.parentElement !== this.layer) this.layer.append(element);
   }
 
   showPlaceholder(id, position = "center") {
     const current = this.sprites.get(id);
     if (!current || current.tagName !== "IMG") return;
+    current.onerror = null;
+    current.onload = null;
+    this.cancelElementAnimations(current);
     const placeholder = document.createElement("div");
     placeholder.dataset.characterId = id;
     placeholder.className = `character-placeholder position-${position}`;
@@ -87,7 +93,10 @@ export class CharacterRenderer {
       ? [...this.exitingElements.entries()]
       : (this.exitingElements.has(id) ? [[id, this.exitingElements.get(id)]] : []);
     for (const [spriteId, elements] of entries) {
-      for (const element of elements) element.remove();
+      for (const element of elements) {
+        this.cancelElementAnimations(element);
+        element.remove();
+      }
       this.exitingElements.delete(spriteId);
     }
   }
@@ -101,6 +110,7 @@ export class CharacterRenderer {
     for (const [spriteId, element] of targets) {
       if (this.sprites.get(spriteId) === element) this.sprites.delete(spriteId);
       if (!animate || !element.isConnected || typeof element.animate !== "function") {
+        this.cancelElementAnimations(element);
         element.remove();
         continue;
       }
@@ -115,6 +125,7 @@ export class CharacterRenderer {
       this.exitingElements.set(spriteId, exiting);
       this.playbackClock?.applyAnimationRate(exitAnimation);
       const cleanup = () => {
+        exitAnimation.cancel();
         element.remove();
         exiting.delete(element);
         if (!exiting.size) this.exitingElements.delete(spriteId);
