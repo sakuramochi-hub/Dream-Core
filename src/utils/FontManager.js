@@ -68,6 +68,9 @@ export async function applyFontSettings(settings = {}) {
     link.id = "game-google-font-stylesheet";
     link.rel = "stylesheet";
     link.href = stylesheetUrl;
+    link.dataset.loadState = "loading";
+    link.addEventListener("load", () => { link.dataset.loadState = "loaded"; }, { once: true });
+    link.addEventListener("error", () => { link.dataset.loadState = "failed"; }, { once: true });
     document.head.append(link);
     return true;
   }

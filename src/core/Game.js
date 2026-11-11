@@ -11,6 +11,7 @@ import { DialogueBox } from "../ui/DialogueBox.js";
 import { AudioManager } from "../utils/AudioManager.js";
 import { PlaybackClock } from "../utils/PlaybackClock.js";
 import { applyFontSettings } from "../utils/FontManager.js";
+import { GamePreloader } from "../utils/GamePreloader.js";
 
 const DEFAULT_UI_THEME = Object.freeze({
   dialogueBackgroundColor: "#0c1018",
@@ -83,6 +84,7 @@ export class Game {
     this.state = new GameState();
     this.scenarioLoader = new ScenarioLoader();
     this.manifestLoader = new ManifestLoader();
+    this.gamePreloader = new GamePreloader(this.manifestLoader, this.scenarioLoader);
     this.judgmentSystem = new JudgmentSystem();
     this.resetSystem = new ResetSystem();
     this.encounterSelector = null;
@@ -107,21 +109,38 @@ export class Game {
   async initialize() {
     this.cacheDom();
     this.dom.game.classList.add("at-title");
+
+    const editorPreview = new URLSearchParams(window.location.search).get("editorPreview") === "1";
+    this.dom.titleScreen.hidden = true;
+    this.dom.loadingScreen.hidden = editorPreview;
+    this.dom.loadingRetryButton.hidden = true;
+    this.dom.loadingLabel.textContent = "LOADING";
+    this.updateLoadingProgress(0);
+    this.bindEvents();
+
     const [config, , debugMode] = await Promise.all([
       this.scenarioLoader.loadGameConfig(),
       this.manifestLoader.load(),
       this.scenarioLoader.loadDebugMode()
     ]);
     this.config = config;
-    await applyFontSettings(config.fontSettings);
     this.debugMode = debugMode;
-    this.opening = await this.scenarioLoader.loadOpening(config.opening);
-    this.ending = await this.scenarioLoader.loadEnding(config.ending);
-    this.scenarioIndex = await this.scenarioLoader.loadScenarioIndex(config.scenarioIndex);
+    this.updateLoadingProgress(8);
+
+    await applyFontSettings(config.fontSettings);
+    if (!editorPreview) await this.waitForFonts();
+    this.updateLoadingProgress(14);
+
+    [this.opening, this.ending, this.scenarioIndex] = await Promise.all([
+      this.scenarioLoader.loadOpening(config.opening),
+      this.scenarioLoader.loadEnding(config.ending),
+      this.scenarioLoader.loadScenarioIndex(config.scenarioIndex)
+    ]);
 
     if (!this.scenarioIndex.normal || !Array.isArray(this.scenarioIndex.anomalies) || this.scenarioIndex.anomalies.length === 0) {
       throw new Error("scenario-index.json に通常シナリオ1本と異変シナリオ一覧を登録してください");
     }
+    this.updateLoadingProgress(20);
 
     this.encounterSelector = new EncounterSelector(this.scenarioIndex.selection);
     this.encounterSelector.configure(this.scenarioIndex);
@@ -159,14 +178,11 @@ export class Game {
       playbackClock: this.playbackClock
     });
 
-    this.bindEvents();
     this.applyUiText();
     this.applyUiTheme();
-    this.applyTitleScreenBackground();
     this.dom.gameTitle.textContent = config.title;
     document.title = config.title;
     this.dom.titleScreenTitle.textContent = config.titleScreenTitle || config.title;
-    this.dom.titleScreen.hidden = false;
     this.dom.dialoguePanel.hidden = true;
     this.dom.loopIntroScreen.hidden = true;
     this.dom.debugIndicator.hidden = true;
@@ -174,10 +190,42 @@ export class Game {
     this.dialogueBox.setJudgmentEnabled(false);
     this.dom.slapButton.disabled = false;
 
-    if (new URLSearchParams(window.location.search).get("editorPreview") === "1") {
+    if (editorPreview) {
+      this.dom.loadingScreen.hidden = true;
       this.initializeEditorPreview();
-    } else {
-      this.setScreenBgm(config.titleScreenBgm);
+      return;
+    }
+
+    await this.gamePreloader.preload({
+      scenarioIndex: this.scenarioIndex,
+      onProgress: (percent) => this.updateLoadingProgress(20 + percent * 0.79)
+    });
+
+    this.applyTitleScreenBackground();
+    this.updateLoadingProgress(100);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    this.dom.loadingScreen.hidden = true;
+    this.dom.titleScreen.hidden = false;
+    this.setScreenBgm(config.titleScreenBgm);
+  }
+
+  async waitForFonts() {
+    const stylesheet = document.getElementById("game-google-font-stylesheet");
+    if (stylesheet && stylesheet.dataset.loadState === "loading" && !stylesheet.sheet) {
+      await Promise.race([
+        new Promise((resolve) => {
+          stylesheet.addEventListener("load", resolve, { once: true });
+          stylesheet.addEventListener("error", resolve, { once: true });
+          if (stylesheet.dataset.loadState !== "loading" || stylesheet.sheet) resolve();
+        }),
+        new Promise((resolve) => window.setTimeout(resolve, 3500))
+      ]);
+    }
+    if (document.fonts?.ready) {
+      await Promise.race([
+        document.fonts.ready,
+        new Promise((resolve) => window.setTimeout(resolve, 1500))
+      ]);
     }
   }
 
@@ -191,6 +239,7 @@ export class Game {
   }
 
   initializeEditorPreview() {
+    this.dom.loadingScreen.hidden = true;
     this.dom.game.classList.remove("at-title");
     this.dom.game.classList.add("editor-preview-mode");
     this.dom.titleScreen.hidden = true;
@@ -325,7 +374,8 @@ export class Game {
       "title-screen", "title-screen-background", "title-screen-title", "start-button", "staff-roll-screen", "staff-roll-background", "staff-roll",
       "ending-screen", "ending-screen-background", "ending-screen-title", "title-button", "screen-transition-cover",
       "loop-intro-screen", "loop-intro-text", "debug-indicator", "judgment-panel", "slap-button", "slap-button-label",
-      "options-button", "options-screen", "options-close-button", "bgm-volume-input", "se-volume-input", "bgm-volume-value", "se-volume-value", "speed-button", "game-title"
+      "options-button", "options-screen", "options-close-button", "bgm-volume-input", "se-volume-input", "bgm-volume-value", "se-volume-value", "speed-button", "game-title",
+      "loading-screen", "loading-label", "loading-progress-track", "loading-progress-bar", "loading-progress-percent", "loading-retry-button"
     ];
     for (const id of ids) this.dom[this.toCamelCase(id)] = document.getElementById(id);
   }
@@ -508,6 +558,7 @@ export class Game {
 
   bindEvents() {
     this.dom.startButton.addEventListener("click", () => this.startNewGame());
+    this.dom.loadingRetryButton.addEventListener("click", () => window.location.reload());
     this.dom.titleButton.addEventListener("click", () => this.returnToTitle());
     this.dom.slapButton.addEventListener("click", () => this.submitChoice("slap"));
     this.dom.optionsButton.addEventListener("click", () => this.openOptions());
@@ -552,10 +603,19 @@ export class Game {
     this.sceneRenderer.clearScene();
   }
 
+  updateLoadingProgress(percent) {
+    const value = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+    this.dom.loadingProgressBar.style.width = `${value}%`;
+    this.dom.loadingProgressTrack.setAttribute("aria-valuenow", String(value));
+    this.dom.loadingProgressPercent.textContent = `${value}%`;
+  }
+
   async startNewGame() {
     if (this.inputLocked) return;
     this.inputLocked = true;
     this.audioManager?.stopBgm();
+
+    this.dom.titleScreen.hidden = true;
     this.encounterLoadId += 1;
     this.loopIntroToken += 1;
     this.dom.loopIntroScreen.hidden = true;

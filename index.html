@@ -1,10 +1,23 @@
 <!doctype html>
-<html lang="ja">
+<html lang="ja" class="startup-loading">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#303847">
-  <title>放課後の8回目</title>
+  <title></title>
+  <style>
+    html, body { width: 100%; height: 100%; margin: 0; background: #080c14; }
+    #game { position: fixed; inset: 0; overflow: hidden; background: #080c14; }
+    html.startup-loading #game-canvas { visibility: hidden; }
+    #loading-screen { position: absolute; z-index: 999999; inset: 0; display: grid; place-items: center; padding: 40px; background: #080c14; color: #f4f2f0; }
+    #loading-screen[hidden] { display: none !important; }
+    #loading-screen .loading-panel { display: grid; width: min(520px, 76%); justify-items: center; gap: 20px; }
+    #loading-screen .loading-label { margin: 0; font: 600 20px/1.4 sans-serif; letter-spacing: .22em; }
+    #loading-screen .loading-progress-track { width: 100%; height: 5px; overflow: hidden; border-radius: 999px; background: rgba(255,255,255,.18); }
+    #loading-screen .loading-progress-bar { width: 0; height: 100%; border-radius: inherit; background: #f0c1d0; }
+    #loading-screen .loading-progress-percent { color: rgba(255,255,255,.74); font: 15px sans-serif; font-variant-numeric: tabular-nums; }
+    #loading-screen .loading-retry-button { margin-top: 12px; }
+  </style>
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/layout.css">
   <link rel="stylesheet" href="styles/dialogue.css">
@@ -14,9 +27,19 @@
 </head>
 <body>
   <main id="game" class="game-shell">
+<section id="loading-screen" class="loading-screen" aria-label="読み込み">
+          <div class="loading-panel">
+            <p id="loading-label" class="loading-label">LOADING</p>
+            <div id="loading-progress-track" class="loading-progress-track" role="progressbar" aria-label="読み込み進捗" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div id="loading-progress-bar" class="loading-progress-bar"></div>
+            </div>
+            <output id="loading-progress-percent" class="loading-progress-percent">0%</output>
+            <button id="loading-retry-button" class="primary-button loading-retry-button" type="button" hidden>再試行</button>
+          </div>
+        </section>
     <div id="game-canvas" class="game-canvas">
     <header class="game-header">
-      <h1 id="game-title">放課後の8回目</h1>
+      <h1 id="game-title" hidden></h1>
       <div id="debug-indicator" class="debug-indicator" hidden aria-live="polite"></div>
     </header>
 
@@ -43,11 +66,12 @@
           </section>
         </div>
 
-        <section id="title-screen" class="title-screen">
+        <section id="title-screen" class="title-screen" hidden>
           <div id="title-screen-background" class="title-screen-background" aria-hidden="true"></div>
-          <h2 id="title-screen-title">放課後の8回目</h2>
+          <h2 id="title-screen-title"></h2>
           <button id="start-button" class="primary-button" type="button">はじめる</button>
         </section>
+
 
         <section id="staff-roll-screen" class="staff-roll-screen" hidden aria-label="スタッフロール">
           <div id="staff-roll-background" class="staff-roll-background" aria-hidden="true"></div>

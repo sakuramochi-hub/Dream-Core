@@ -20,30 +20,33 @@ export class CharacterRenderer {
   show({ id, expression = "default", position = "center" }) {
     this.removeExiting(id);
     const source = this.manifestLoader.getCharacter(id, expression);
-    let element = this.sprites.get(id);
+    const cachedImage = this.manifestLoader.getPreloadedCharacterImage?.(id, expression) ?? null;
+    const previous = this.sprites.get(id);
     const shouldBeImage = Boolean(source);
+    let element = cachedImage || previous;
     const isImage = element?.tagName === "IMG";
 
-    if (!element || shouldBeImage !== isImage) {
-      element?.remove();
-      element = shouldBeImage ? document.createElement("img") : document.createElement("div");
+    if (!element || shouldBeImage !== isImage || (cachedImage && previous !== cachedImage)) {
+      previous?.remove();
+      element = shouldBeImage ? (cachedImage || document.createElement("img")) : document.createElement("div");
       element.dataset.characterId = id;
       if (shouldBeImage) {
         element.alt = "";
         element.draggable = false;
       }
       this.sprites.set(id, element);
-      this.layer.append(element);
     }
 
-    element.className = `${shouldBeImage ? "character-sprite" : "character-placeholder"} position-${position}`;
+    const preloadClass = cachedImage ? " is-preloaded" : "";
+    element.className = `${shouldBeImage ? "character-sprite" : "character-placeholder"}${preloadClass} position-${position}`;
     this.applyCharacterSettings(element, id);
     if (shouldBeImage) {
       element.onerror = () => this.showPlaceholder(id, position);
-      element.src = source;
+      if (!cachedImage && element.src !== source) element.src = source;
     } else {
       element.style.backgroundColor = this.manifestLoader.getCharacterPlaceholder(id);
     }
+    if (element.parentElement !== this.layer) this.layer.append(element);
   }
 
   showPlaceholder(id, position = "center") {
