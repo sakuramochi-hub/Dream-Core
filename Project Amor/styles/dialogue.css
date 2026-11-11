@@ -1,0 +1,145 @@
+.dialogue-stack {
+  position: absolute;
+  z-index: 5;
+  left: 4cqw;
+  right: 4cqw;
+  bottom: 3.5cqh;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.dialogue-panel {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  display: grid;
+  grid-template-columns: minmax(80px, var(--dialogue-speaker-column-width, 180px)) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  column-gap: 0;
+  row-gap: 0;
+  width: 100%;
+  height: clamp(140px, 20cqh, 230px);
+  min-height: 0;
+  flex: 0 0 clamp(140px, 20cqh, 230px);
+  padding: var(--dialogue-panel-padding-top, calc(clamp(14px, 2cqw, 26px) + 8px))
+    var(--dialogue-panel-padding-right, clamp(18px, 3cqw, 38px))
+    var(--dialogue-panel-padding-bottom, 12px)
+    var(--dialogue-panel-padding-left, clamp(18px, 3cqw, 38px));
+  border: 1px solid var(--panel-border);
+  border-radius: var(--dialogue-panel-border-radius, 4px);
+  background: var(--dialogue-panel-background, var(--panel));
+  color: var(--dialogue-text-color, #f4f2f0);
+  box-shadow: 0 12px 34px rgba(0,0,0,0.24);
+  backdrop-filter: blur(12px);
+}
+
+/* 話者名は左側の専用列に置き、本文は常に右側から始める。
+   話者が空でも列を残すため、地の文で本文位置がずれない。 */
+.dialogue-heading {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 0;
+  /* 会話送りボタン撤去前の話者名の中央位置を維持する。
+     下部34pxは話者名の配置計算だけに残し、本文領域は全高を使う。 */
+  height: calc(100% - 34px);
+  align-self: start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 10px;
+  scrollbar-width: thin;
+}
+
+.speaker-name {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+  color: var(--speaker-name-color, var(--accent-strong));
+  font-size: var(--speaker-name-font-size, 15px);
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.scene-tag { display: none; }
+
+.dialogue-text {
+  grid-column: 2;
+  grid-row: 1;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  margin: var(--dialogue-text-top-inset, 0px) var(--dialogue-text-right-inset, 0px) var(--dialogue-text-bottom-inset, 0px) var(--dialogue-text-left-inset, 0px);
+  padding: 0 6px 0 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: var(--dialogue-text-color, #f4f2f0);
+  font-size: var(--dialogue-font-size, 20px);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.28) transparent;
+}
+
+.dialogue-text::-webkit-scrollbar { width: 6px; }
+.dialogue-text::-webkit-scrollbar-track { background: transparent; }
+.dialogue-text::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.28); border-radius: 4px; }
+
+.quiet-button {
+  border: 1px solid rgba(255,255,255,0.23);
+  border-radius: var(--utility-button-border-radius, 3px);
+  background: var(--utility-button-background, rgba(255,255,255,0.08));
+  color: var(--utility-button-text, inherit);
+  padding: var(--utility-button-padding-vertical, 7px) var(--utility-button-padding-horizontal, 14px);
+  cursor: pointer;
+  font-size: var(--utility-button-font-size, 13px);
+}
+.quiet-button:hover { background: color-mix(in srgb, var(--utility-button-background, rgba(255,255,255,0.08)) 72%, white); }
+
+/* 会話ウィンドウ内の文章はゲーム表示として扱い、文字選択を無効化する */
+.dialogue-panel {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+.dialogue-end-indicator {
+  display: inline-flex;
+  width: 0.78em;
+  height: 1em;
+  margin-left: 0.32em;
+  align-items: center;
+  justify-content: center;
+  vertical-align: -0.12em;
+  color: currentColor;
+  opacity: 0.28;
+  animation: dialogue-end-indicator-pulse 1.8s ease-in-out infinite;
+}
+.dialogue-end-indicator[hidden] { display: none; }
+.dialogue-end-indicator svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+@keyframes dialogue-end-indicator-pulse {
+  0%, 100% { opacity: 0.22; }
+  50% { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialogue-end-indicator { animation-duration: 3.2s; }
+}
