@@ -10,6 +10,8 @@
   animation: character-enter 220ms ease both;
 }
 
+.character-sprite.is-preloaded { animation: none; }
+
 .character-placeholder {
   position: absolute;
   bottom: 17%;
@@ -38,7 +40,9 @@
 
 /* Editor preview: keep character sprites static while paging through dialogue. */
 .editor-preview-mode .character-sprite,
-.editor-preview-mode .character-placeholder {
+.editor-preview-mode .character-sprite.is-preloaded { animation: none; }
+
+.character-placeholder {
   animation: none !important;
   transition: none !important;
 }

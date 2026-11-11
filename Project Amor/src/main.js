@@ -1,10 +1,13 @@
 import { Game } from "./core/Game.js";
 import { GameViewport } from "./utils/GameViewport.js";
 
-new GameViewport().initialize();
-
+const viewport = new GameViewport();
 const game = new Game();
-game.initialize().catch((error) => {
+
+game.initialize().then(() => {
+  viewport.initialize();
+  document.documentElement.classList.remove("startup-loading");
+}).catch((error) => {
   console.error(error);
   const loadingScreen = document.getElementById("loading-screen");
   const loadingLabel = document.getElementById("loading-label");

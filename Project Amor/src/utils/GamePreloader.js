@@ -24,12 +24,13 @@ async function decodeImage(source) {
   image.src = source;
   if (typeof image.decode === "function") {
     await image.decode();
-    return;
+    return image;
   }
   await new Promise((resolve, reject) => {
     image.onload = resolve;
     image.onerror = () => reject(new Error(`画像をデコードできません: ${source}`));
   });
+  return image;
 }
 
 async function readResponseBlob(response, onProgress) {
@@ -108,8 +109,10 @@ export class GamePreloader {
         const blob = await readResponseBlob(response, (value) => report(index, value));
         const objectUrl = URL.createObjectURL(blob);
         try {
-          if (isImagePath(task.path, blob.type)) await decodeImage(objectUrl);
-          this.manifestLoader.registerPreloadedAsset(task.path, objectUrl);
+          const decodedImage = isImagePath(task.path, blob.type)
+            ? await decodeImage(objectUrl)
+            : null;
+          this.manifestLoader.registerPreloadedAsset(task.path, objectUrl, decodedImage);
         } catch (error) {
           URL.revokeObjectURL(objectUrl);
           throw error;

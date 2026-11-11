@@ -4,6 +4,7 @@ export class ManifestLoader {
     this.assetBase = new URL(".", this.url);
     this.manifest = null;
     this.preloadedAssets = new Map();
+    this.preloadedImages = new Map();
   }
 
   resolveAsset(value) {
@@ -25,13 +26,26 @@ export class ManifestLoader {
     }
   }
 
-  registerPreloadedAsset(source, objectUrl) {
+  registerPreloadedAsset(source, objectUrl, decodedImage = null) {
     const resolved = new URL(source, this.assetBase).href;
     const previous = this.preloadedAssets.get(resolved);
     if (previous && previous !== objectUrl && previous.startsWith('blob:')) {
       URL.revokeObjectURL(previous);
     }
     this.preloadedAssets.set(resolved, objectUrl);
+    if (decodedImage && decodedImage.tagName === "IMG") this.preloadedImages.set(resolved, decodedImage);
+  }
+
+  getPreloadedCharacterImage(id, expression = "default") {
+    const character = this.manifest?.assets?.characters?.[id];
+    const assetPath = character?.[expression] ?? character?.default ?? null;
+    if (!assetPath) return null;
+    try {
+      const resolved = new URL(assetPath, this.assetBase).href;
+      return this.preloadedImages.get(resolved) ?? null;
+    } catch {
+      return null;
+    }
   }
 
   async load() {
