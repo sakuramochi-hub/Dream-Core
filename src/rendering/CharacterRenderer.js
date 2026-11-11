@@ -23,16 +23,29 @@ export class CharacterRenderer {
     const cachedImage = this.manifestLoader.getPreloadedCharacterImage?.(id, expression) ?? null;
     const previous = this.sprites.get(id);
     const shouldBeImage = Boolean(source);
-    let element = cachedImage || previous;
-    const isImage = element?.tagName === "IMG";
+    const previousIsImage = previous?.tagName === "IMG";
+    const previousSource = previous?.dataset?.assetSource || null;
+    const sourceChanged = shouldBeImage && previousIsImage && !cachedImage && previousSource !== source;
+    const cachedImageChanged = Boolean(cachedImage && previous !== cachedImage);
+    const elementTypeChanged = Boolean(previous && shouldBeImage !== previousIsImage);
 
-    if (!element || shouldBeImage !== isImage || (cachedImage && previous !== cachedImage)) {
-      previous?.remove();
-      element = shouldBeImage ? (cachedImage || document.createElement("img")) : document.createElement("div");
+    let element = cachedImage || previous;
+    if (!element || sourceChanged || cachedImageChanged || elementTypeChanged) {
+      if (previous) {
+        // A slow request may still dispatch its error event after its image has
+        // been replaced. Detach the old handler and make stale callbacks inert.
+        previous.onerror = null;
+        previous.onload = null;
+        previous.remove();
+      }
+      element = shouldBeImage
+        ? (cachedImage || document.createElement("img"))
+        : document.createElement("div");
       element.dataset.characterId = id;
       if (shouldBeImage) {
         element.alt = "";
         element.draggable = false;
+        element.dataset.assetSource = source;
       }
       this.sprites.set(id, element);
     }
@@ -41,7 +54,15 @@ export class CharacterRenderer {
     element.className = `${shouldBeImage ? "character-sprite" : "character-placeholder"}${preloadClass} position-${position}`;
     this.applyCharacterSettings(element, id);
     if (shouldBeImage) {
-      element.onerror = () => this.showPlaceholder(id, position);
+      const requestSource = source;
+      element.onerror = () => {
+        // Ignore an error from a superseded expression or a sprite that is no
+        // longer the active image for this character.
+        if (this.sprites.get(id) !== element) return;
+        if (element.dataset.assetSource !== requestSource) return;
+        console.error(`[CharacterRenderer] 立ち絵を読み込めません: ${requestSource}`);
+        this.showPlaceholder(id, position);
+      };
       if (!cachedImage && element.src !== source) element.src = source;
     } else {
       element.style.backgroundColor = this.manifestLoader.getCharacterPlaceholder(id);
