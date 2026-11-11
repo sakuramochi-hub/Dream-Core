@@ -10,7 +10,7 @@
   animation: character-enter 220ms ease both;
 }
 
-.character-sprite.is-preloaded { animation: none; }
+.character-sprite.is-expression-swap { animation: none; }
 
 .character-placeholder {
   position: absolute;
@@ -40,7 +40,7 @@
 
 /* Editor preview: keep character sprites static while paging through dialogue. */
 .editor-preview-mode .character-sprite,
-.editor-preview-mode .character-sprite.is-preloaded { animation: none; }
+.editor-preview-mode .character-sprite.is-expression-swap { animation: none; }
 
 .character-placeholder {
   animation: none !important;
