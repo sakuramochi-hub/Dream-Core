@@ -30,7 +30,24 @@ const DEFAULT_UI_THEME = Object.freeze({
   optionButtonIconColor: "#f5f3f2",
   optionButtonBackgroundColor: "#2d75cd",
   optionButtonBackgroundOpacity: 100,
+  dialoguePanelBorderEnabled: true,
+  dialoguePanelBorderColor: "#ffffff",
+  dialoguePanelBorderWidthPx: 1,
+  primaryButtonBorderEnabled: true,
+  primaryButtonBorderColor: "#ffffff",
+  primaryButtonBorderWidthPx: 1,
+  slapButtonBorderEnabled: true,
+  slapButtonBorderColor: "#ffffff",
+  slapButtonBorderWidthPx: 1,
+  utilityButtonBorderEnabled: true,
+  utilityButtonBorderColor: "#ffffff",
+  utilityButtonBorderWidthPx: 1,
+  optionButtonBorderEnabled: true,
   optionButtonBorderColor: "#ffffff",
+  optionButtonBorderWidthPx: 1,
+  optionsPanelBorderEnabled: true,
+  optionsPanelBorderColor: "#ffffff",
+  optionsPanelBorderWidthPx: 1,
   dialogueFontSize: 20,
   speakerNameFontSize: 15,
   dialogueSpeakerColumnWidthPx: 180,
@@ -52,7 +69,6 @@ const DEFAULT_UI_THEME = Object.freeze({
   utilityButtonBorderRadiusPx: 3,
   utilityButtonPaddingVerticalPx: 7,
   utilityButtonPaddingHorizontalPx: 14,
-  optionButtonBorderWidthPx: 1,
   optionButtonBorderRadiusPx: 32,
   optionButtonSizePx: 56,
   titleFontSize: 64,
@@ -67,6 +83,8 @@ const DEFAULT_UI_THEME = Object.freeze({
 
 const DEFAULT_UI_TEXT = Object.freeze({
   startButton: "はじめる",
+  newGameButton: "NEW GAME",
+  configButton: "CONFIG",
   slapButton: "頬を叩く",
   titleButton: "タイトルへ",
   speedNormal: "倍速 OFF",
@@ -77,6 +95,17 @@ const DEFAULT_UI_TEXT = Object.freeze({
   debugNormal: "DEBUG｜異変なし",
   loadErrorTitle: "読み込みエラー",
   reloadStartButton: "再読み込みして開始"
+});
+
+const DEFAULT_TITLE_SCREEN_STYLE = Object.freeze({
+  mainTitleX: 75, mainTitleY: 12, mainTitleWidth: 55, mainTitleAlign: "center",
+  mainTitleFontSize: 96, mainTitleFontFamily: "", mainTitleColor: "#20252a",
+  subtitleX: 75, subtitleY: 22, subtitleWidth: 46, subtitleAlign: "center",
+  subtitleFontSize: 40, subtitleFontFamily: "", subtitleColor: "#33434a",
+  menuX: 75, menuY: 32, menuWidth: 36, menuAlign: "center",
+  menuFontSize: 52, menuFontFamily: "", menuGapPx: 24, menuItemHeightPx: 72,
+  menuTextColor: "#20282e", menuHoverTextColor: "#ffffff", menuHoverBandColor: "#69b8cf",
+  backgroundGradientOpacity: 68, backgroundGradientWidth: 62
 });
 
 export class Game {
@@ -104,6 +133,7 @@ export class Game {
     this.scriptRunId = 0;
     this.encounterLoadId = 0;
     this.loopIntroToken = 0;
+    this.optionsReturnFocusTarget = null;
   }
 
   async initialize() {
@@ -182,7 +212,8 @@ export class Game {
     this.applyUiTheme();
     this.dom.gameTitle.textContent = config.title;
     document.title = config.title;
-    this.dom.titleScreenTitle.textContent = config.titleScreenTitle || config.title;
+    this.updateTitleScreenContent();
+    this.applyTitleScreenStyle();
     this.dom.dialoguePanel.hidden = true;
     this.dom.loopIntroScreen.hidden = true;
     this.dom.debugIndicator.hidden = true;
@@ -371,7 +402,7 @@ export class Game {
     const ids = [
       "game", "game-canvas", "scene", "background-layer", "character-layer", "slap-flash", "scene-transition", "scene-status",
       "dialogue-panel", "speaker-name", "dialogue-text", "scene-tag",
-      "title-screen", "title-screen-background", "title-screen-title", "start-button", "staff-roll-screen", "staff-roll-background", "staff-roll",
+      "title-screen", "title-screen-background", "title-screen-title", "title-screen-main-title", "title-screen-subtitle", "title-screen-menu", "start-button", "title-config-button", "staff-roll-screen", "staff-roll-background", "staff-roll",
       "ending-screen", "ending-screen-background", "ending-screen-title", "title-button", "screen-transition-cover",
       "loop-intro-screen", "loop-intro-text", "debug-indicator", "judgment-panel", "slap-button", "slap-button-label",
       "options-button", "options-screen", "options-close-button", "bgm-volume-input", "se-volume-input", "bgm-volume-value", "se-volume-value", "speed-button", "game-title",
@@ -390,15 +421,27 @@ export class Game {
   }
 
   applyUiText() {
-    this.dom.startButton.textContent = this.getUiText("startButton");
+    this.dom.startButton.textContent = this.getUiText("newGameButton");
+    this.dom.titleConfigButton.textContent = this.getUiText("configButton");
     this.dom.slapButtonLabel.textContent = this.getUiText("slapButton");
     this.dom.titleButton.textContent = this.getUiText("titleButton");
     this.updatePlaybackSpeedButtonLabel();
   }
 
+  updateTitleScreenContent() {
+    const mainTitle = String(this.config?.titleScreenTitle || this.config?.title || "");
+    const subtitle = String(this.config?.titleScreenSubtitle || "").trim();
+    this.dom.titleScreenMainTitle.textContent = mainTitle;
+    this.dom.titleScreenSubtitle.textContent = subtitle;
+    this.dom.titleScreenSubtitle.hidden = !subtitle;
+    this.dom.titleConfigButton.hidden = false;
+    this.dom.startButton.textContent = this.getUiText("newGameButton");
+    this.dom.titleConfigButton.textContent = this.getUiText("configButton");
+  }
 
   applyUiTheme() {
-    const theme = { ...DEFAULT_UI_THEME, ...(this.config?.uiTheme || {}) };
+    const configuredTheme = this.config?.uiTheme || {};
+    const theme = { ...DEFAULT_UI_THEME, ...configuredTheme };
     const normalizeHex = (value, fallback) => {
       const candidate = String(value ?? "").trim();
       if (/^#[0-9a-f]{6}$/i.test(candidate)) return candidate;
@@ -469,8 +512,35 @@ export class Game {
     root.style.setProperty("--utility-button-text", normalizeHex(theme.utilityButtonTextColor, DEFAULT_UI_THEME.utilityButtonTextColor));
     root.style.setProperty("--option-button-icon-color", normalizeHex(theme.optionButtonIconColor, DEFAULT_UI_THEME.optionButtonIconColor));
     root.style.setProperty("--option-button-background", rgba(theme.optionButtonBackgroundColor, theme.optionButtonBackgroundOpacity));
-    root.style.setProperty("--option-button-border-color", normalizeHex(theme.optionButtonBorderColor, DEFAULT_UI_THEME.optionButtonBorderColor));
-    root.style.setProperty("--option-button-border-width", areaPx("optionButtonBorderWidthPx", 0, 20));
+
+    // Old projects only have one shared border setting. Use it as the initial
+    // value for each component until an individual setting is saved.
+    const legacyBorder = {
+      enabled: configuredTheme.uiBorderEnabled !== false && configuredTheme.uiBorderEnabled !== "false",
+      color: configuredTheme.uiBorderColor ?? "#ffffff",
+      width: configuredTheme.uiBorderWidthPx ?? 1
+    };
+    const borderGroups = [
+      ["dialoguePanel", "dialogue-panel"],
+      ["primaryButton", "primary-button"],
+      ["slapButton", "slap-button"],
+      ["utilityButton", "utility-button"],
+      ["optionButton", "option-button"],
+      ["optionsPanel", "options-panel"]
+    ];
+    for (const [key, cssName] of borderGroups) {
+      const enabledValue = configuredTheme[`${key}BorderEnabled`];
+      const colorValue = configuredTheme[`${key}BorderColor`];
+      const widthValue = configuredTheme[`${key}BorderWidthPx`];
+      const enabled = enabledValue == null
+        ? legacyBorder.enabled
+        : enabledValue !== false && enabledValue !== "false";
+      const borderColor = normalizeHex(colorValue ?? legacyBorder.color, "#ffffff");
+      const parsedWidth = Number(widthValue ?? legacyBorder.width);
+      const borderWidth = `${Math.max(0, Math.min(20, Number.isFinite(parsedWidth) ? Math.round(parsedWidth) : 1))}px`;
+      root.style.setProperty(`--${cssName}-border-color`, borderColor);
+      root.style.setProperty(`--${cssName}-border-width`, enabled ? borderWidth : "0px");
+    }
     root.style.setProperty("--option-button-border-radius", areaPx("optionButtonBorderRadiusPx", 0, 120));
     root.style.setProperty("--option-button-size", areaPx("optionButtonSizePx", 32, 120));
   }
@@ -485,6 +555,68 @@ export class Game {
     layer.style.backgroundColor = source
       ? this.manifestLoader.getBackgroundPlaceholder(key)
       : "rgba(13,18,30,0.35)";
+  }
+
+  applyTitleScreenStyle() {
+    const configured = this.config?.titleScreenStyle || {};
+    const style = { ...DEFAULT_TITLE_SCREEN_STYLE, ...configured };
+    const root = document.documentElement;
+    const bounded = (key, min, max, fallback) => {
+      const value = Number(style[key]);
+      return Math.max(min, Math.min(max, Number.isFinite(value) ? value : fallback));
+    };
+    const align = (key) => ["left", "center", "right"].includes(style[key]) ? style[key] : "center";
+    const color = (key, fallback) => {
+      const value = String(style[key] ?? "").trim();
+      if (/^#[0-9a-f]{6}$/i.test(value)) return value;
+      if (/^#[0-9a-f]{3}$/i.test(value)) return `#${value[1]}${value[1]}${value[2]}${value[2]}${value[3]}${value[3]}`;
+      return fallback;
+    };
+    const family = (key) => {
+      const value = String(style[key] ?? "").trim();
+      if (!value) return "var(--game-font-family, sans-serif)";
+      return value.length <= 240 && /^[\p{L}\p{M}\p{N}\s"'(),._-]+$/u.test(value)
+        ? value
+        : "var(--game-font-family, sans-serif)";
+    };
+    const percentVars = [
+      ["mainTitleX", "--title-main-x", 0, 100], ["mainTitleY", "--title-main-y", 0, 100],
+      ["mainTitleWidth", "--title-main-width", 8, 100],
+      ["subtitleX", "--title-subtitle-x", 0, 100], ["subtitleY", "--title-subtitle-y", 0, 100],
+      ["subtitleWidth", "--title-subtitle-width", 8, 100],
+      ["menuX", "--title-menu-x", 0, 100], ["menuY", "--title-menu-y", 0, 100],
+      ["menuWidth", "--title-menu-width", 8, 100]
+    ];
+    for (const [key, variable, min, max] of percentVars) {
+      const fallback = DEFAULT_TITLE_SCREEN_STYLE[key];
+      root.style.setProperty(variable, `${bounded(key, min, max, fallback)}%`);
+    }
+    root.style.setProperty("--title-bg-gradient-opacity", String(bounded("backgroundGradientOpacity", 0, 100, 68) / 100));
+    root.style.setProperty("--title-bg-gradient-width", `${bounded("backgroundGradientWidth", 0, 100, 62)}%`);
+    for (const [key, variable, min, max] of [
+      ["mainTitleFontSize", "--title-main-font-size", 8, 180],
+      ["subtitleFontSize", "--title-subtitle-font-size", 8, 120],
+      ["menuFontSize", "--title-menu-font-size", 8, 100],
+      ["menuGapPx", "--title-menu-gap", 0, 160],
+      ["menuItemHeightPx", "--title-menu-item-height", 24, 180]
+    ]) {
+      root.style.setProperty(variable, `${bounded(key, min, max, DEFAULT_TITLE_SCREEN_STYLE[key])}px`);
+    }
+    for (const [key, variable] of [
+      ["mainTitleAlign", "--title-main-align"], ["subtitleAlign", "--title-subtitle-align"], ["menuAlign", "--title-menu-align"]
+    ]) root.style.setProperty(variable, align(key));
+    for (const [key, variable] of [
+      ["mainTitleFontFamily", "--title-main-font-family"],
+      ["subtitleFontFamily", "--title-subtitle-font-family"],
+      ["menuFontFamily", "--title-menu-font-family"]
+    ]) root.style.setProperty(variable, family(key));
+    for (const [key, variable, fallback] of [
+      ["mainTitleColor", "--title-main-color", "#20252a"],
+      ["subtitleColor", "--title-subtitle-color", "#33434a"],
+      ["menuTextColor", "--title-menu-text-color", "#20282e"],
+      ["menuHoverTextColor", "--title-menu-hover-text", "#ffffff"],
+      ["menuHoverBandColor", "--title-menu-hover-band", "#69b8cf"]
+    ]) root.style.setProperty(variable, color(key, fallback));
   }
 
   getAudioPreferenceKey() {
@@ -533,17 +665,23 @@ export class Game {
     this.saveAudioPreferences();
   }
 
-  openOptions() {
-    if (this.dom.optionsButton.hidden) return;
+  openOptions(returnFocusTarget = this.dom.optionsButton) {
+    if (!this.dom.optionsScreen) return;
+    if (returnFocusTarget === this.dom.optionsButton && this.dom.optionsButton.hidden) return;
+    this.optionsReturnFocusTarget = returnFocusTarget;
     this.updateAudioVolumeControls();
     this.dom.optionsScreen.hidden = false;
     this.dom.optionsButton.setAttribute("aria-expanded", "true");
+    this.dom.titleConfigButton.setAttribute("aria-expanded", "true");
   }
 
   closeOptions() {
     this.dom.optionsScreen.hidden = true;
     this.dom.optionsButton.setAttribute("aria-expanded", "false");
-    this.dom.optionsButton.focus();
+    this.dom.titleConfigButton.setAttribute("aria-expanded", "false");
+    const target = this.optionsReturnFocusTarget;
+    this.optionsReturnFocusTarget = null;
+    if (target && !target.hidden && target.getClientRects().length > 0) target.focus();
   }
 
   updatePlaybackSpeedButtonLabel() {
@@ -558,6 +696,7 @@ export class Game {
 
   bindEvents() {
     this.dom.startButton.addEventListener("click", () => this.startNewGame());
+    this.dom.titleConfigButton.addEventListener("click", () => this.openOptions(this.dom.titleConfigButton));
     this.dom.loadingRetryButton.addEventListener("click", () => window.location.reload());
     this.dom.titleButton.addEventListener("click", () => this.returnToTitle());
     this.dom.slapButton.addEventListener("click", () => this.submitChoice("slap"));
@@ -585,11 +724,11 @@ export class Game {
 
     this.dom.game.classList.remove("at-ending");
     this.dom.game.classList.add("at-title");
-    this.dom.titleScreenTitle.textContent = this.config.titleScreenTitle || this.config.title;
-    this.dom.startButton.textContent = this.getUiText("startButton");
+    this.updateTitleScreenContent();
     this.dom.titleScreen.hidden = false;
     this.dom.optionsScreen.hidden = true;
     this.dom.optionsButton.setAttribute("aria-expanded", "false");
+    this.dom.titleConfigButton.setAttribute("aria-expanded", "false");
     this.dom.endingScreen.hidden = true;
     this.dom.staffRollScreen.hidden = true;
     this.setScreenBgm(this.config.titleScreenBgm);
@@ -1065,7 +1204,10 @@ export class Game {
     this.dialogueBox?.setJudgmentEnabled(false);
     this.dialogueBox?.hide();
     this.dom.titleScreen.hidden = false;
-    this.dom.titleScreenTitle.textContent = this.getUiText("loadErrorTitle");
+    this.dom.titleScreenMainTitle.textContent = this.getUiText("loadErrorTitle");
+    this.dom.titleScreenSubtitle.textContent = "";
+    this.dom.titleScreenSubtitle.hidden = true;
+    this.dom.titleConfigButton.hidden = true;
     this.dom.startButton.textContent = this.getUiText("reloadStartButton");
     this.dom.judgmentPanel.hidden = true;
     if (this.dom.debugIndicator) this.dom.debugIndicator.hidden = true;

@@ -66,10 +66,16 @@
           </section>
         </div>
 
-        <section id="title-screen" class="title-screen" hidden>
+        <section id="title-screen" class="title-screen" hidden aria-label="タイトル画面">
           <div id="title-screen-background" class="title-screen-background" aria-hidden="true"></div>
-          <h2 id="title-screen-title"></h2>
-          <button id="start-button" class="primary-button" type="button">はじめる</button>
+          <h2 id="title-screen-title" class="title-screen-title">
+            <span id="title-screen-main-title"></span>
+          </h2>
+          <p id="title-screen-subtitle" class="title-screen-subtitle" hidden></p>
+          <nav class="title-screen-menu" id="title-screen-menu" aria-label="タイトルメニュー">
+            <button id="start-button" class="title-menu-button" type="button">NEW GAME</button>
+            <button id="title-config-button" class="title-menu-button" type="button">CONFIG</button>
+          </nav>
         </section>
 
 

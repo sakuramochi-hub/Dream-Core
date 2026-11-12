@@ -28,7 +28,7 @@
     var(--dialogue-panel-padding-right, clamp(18px, 3cqw, 38px))
     var(--dialogue-panel-padding-bottom, 12px)
     var(--dialogue-panel-padding-left, clamp(18px, 3cqw, 38px));
-  border: 1px solid var(--panel-border);
+  border: var(--dialogue-panel-border-width, 1px) solid var(--dialogue-panel-border-color, var(--panel-border));
   border-radius: var(--dialogue-panel-border-radius, 4px);
   background: var(--dialogue-panel-background, var(--panel));
   color: var(--dialogue-text-color, #f4f2f0);
@@ -97,7 +97,7 @@
 .dialogue-text::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.28); border-radius: 4px; }
 
 .quiet-button {
-  border: 1px solid rgba(255,255,255,0.23);
+  border: var(--utility-button-border-width, 1px) solid var(--utility-button-border-color, rgba(255,255,255,0.23));
   border-radius: var(--utility-button-border-radius, 3px);
   background: var(--utility-button-background, rgba(255,255,255,0.08));
   color: var(--utility-button-text, inherit);

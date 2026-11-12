@@ -10,7 +10,10 @@
   animation: character-enter 220ms ease both;
 }
 
-.character-sprite.is-expression-swap { animation: none; }
+.character-sprite.is-expression-swap {
+  animation: none;
+  transition: none;
+}
 
 .character-placeholder {
   position: absolute;

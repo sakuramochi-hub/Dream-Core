@@ -29,7 +29,9 @@
       "bgm2": "assets/audio/枯れ葉_2.mp3",
       "alarm": "assets/audio/目覚まし時計のアラーム.mp3",
       "bgm3": "assets/audio/日常その４.mp3",
-      "harisen": "assets/audio/ビシッとツッコミ2.mp3"
+      "harisen": "assets/audio/ビシッとツッコミ2.mp3",
+      "slap_echo": "assets/audio/鞭で攻撃5.mp3",
+      "wake_up": "assets/audio/キックの衣擦れ2.mp3"
     }
   },
   "placeholders": {

@@ -89,6 +89,11 @@ export class AudioManager {
     }
 
     if (this.bgmKey === bgmKey && this.bgmPlayer) {
+      // Reissuing the current key resumes the same media element. If a fade is
+      // still running, cancel it and restore the selected BGM level without
+      // resetting currentTime.
+      this.cancelBgmFade();
+      this.bgmPlayer.volume = this.getBgmGain();
       if (this.bgmPlayer.paused) await this.startBgm();
       return;
     }
@@ -128,7 +133,11 @@ export class AudioManager {
     this.cancelBgmFade();
     const duration = Math.max(0, Number(durationMs) || 0);
     if (duration === 0 || audio.paused) {
-      this.stopBgm();
+      // A fade-out is a temporary silence, not a stop command. Keep the media
+      // element, key and playback position so the same BGM command can resume
+      // it after any number of wait/dialogue commands.
+      audio.pause();
+      audio.volume = this.getBgmGain();
       return Promise.resolve(true);
     }
 
@@ -157,11 +166,10 @@ export class AudioManager {
         audio.volume = fade.startVolume * (1 - fade.progress);
         if (fade.progress >= 1) {
           this.bgmFade = null;
+          // Keep the paused media element and its exact playback position.
+          // Only an explicit stop or a different BGM key discards this state.
           audio.pause();
-          audio.currentTime = 0;
           audio.volume = this.getBgmGain();
-          this.bgmPlayer = null;
-          this.bgmKey = null;
           resolve(true);
           return;
         }

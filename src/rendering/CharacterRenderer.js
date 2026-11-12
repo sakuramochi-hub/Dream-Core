@@ -121,59 +121,19 @@ export class CharacterRenderer {
     image.dataset.assetSource = source;
     this.updatePresentation(image, id, position);
 
-    const isSwap = Boolean(previous?.isConnected);
-    if (isSwap) {
+    if (previous?.isConnected) {
+      // The replacement image has already loaded and decoded off-screen.
+      // Swap it into the exact same DOM position without hiding or fading either sprite.
       image.classList.add("is-expression-swap");
-      image.style.opacity = "0";
+      image.style.opacity = "1";
+      this.cancelElementAnimations(previous);
+      previous.replaceWith(image);
+    } else {
+      // First appearance keeps the existing character-enter animation.
+      this.layer.append(image);
     }
 
     this.sprites.set(id, image);
-    this.layer.append(image);
-
-    if (isSwap) this.crossFade(id, previous, image);
-  }
-
-  crossFade(id, previous, next) {
-    const inEditorPreview = Boolean(this.layer.closest?.(".editor-preview-mode"));
-    if (inEditorPreview || typeof previous.animate !== "function" || typeof next.animate !== "function") {
-      previous.remove();
-      next.style.opacity = "1";
-      return;
-    }
-
-    const previousOpacity = getComputedStyle(previous).opacity || "1";
-    this.cancelElementAnimations(previous);
-    previous.style.opacity = previousOpacity;
-
-    const duration = 120;
-    const fadeIn = next.animate(
-      [{ opacity: 0 }, { opacity: 1 }],
-      { duration, easing: "ease-out", fill: "forwards" }
-    );
-    const fadeOut = previous.animate(
-      [{ opacity: previousOpacity }, { opacity: 0 }],
-      { duration, easing: "ease-out", fill: "forwards" }
-    );
-
-    const exiting = this.exitingElements.get(id) ?? new Set();
-    exiting.add(previous);
-    this.exitingElements.set(id, exiting);
-    this.playbackClock?.applyAnimationRate(fadeIn);
-    this.playbackClock?.applyAnimationRate(fadeOut);
-
-    fadeIn.finished.then(() => {
-      if (this.sprites.get(id) !== next) return;
-      next.style.opacity = "1";
-      fadeIn.cancel();
-    }, () => {});
-
-    const cleanup = () => {
-      fadeOut.cancel();
-      previous.remove();
-      exiting.delete(previous);
-      if (!exiting.size) this.exitingElements.delete(id);
-    };
-    fadeOut.finished.then(cleanup, cleanup);
   }
 
   showPlaceholder(id, position = "center", previous = this.sprites.get(id) ?? null) {

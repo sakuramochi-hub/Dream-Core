@@ -13,6 +13,12 @@
 }
 .ending-screen { background: rgba(13,18,30,0.35); }
 
+.title-screen {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  text-align: initial;
+}
 .title-screen-background {
   position: absolute;
   z-index: 0;
@@ -23,14 +29,101 @@
   position: absolute;
   inset: 0;
   content: "";
-  background: linear-gradient(180deg, rgba(8,12,22,.38), rgba(8,12,22,.18) 45%, rgba(8,12,22,.48));
+  /* Brighten the title/menu side, echoing the reference layout. */
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0) calc(100% - var(--title-bg-gradient-width, 62%)), rgba(250,253,252,var(--title-bg-gradient-opacity, .68)) 100%),
+    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.10));
 }
 .title-screen > :not(.title-screen-background) {
-  position: relative;
+  position: absolute;
   z-index: 1;
 }
+.title-screen-title {
+  left: var(--title-main-x, 75%);
+  top: var(--title-main-y, 10%);
+  width: var(--title-main-width, 46%);
+  margin: 0;
+  transform: translate(-50%, -50%);
+  color: var(--title-main-color, #20252a);
+  font-family: var(--title-main-font-family, var(--game-font-family, sans-serif));
+  font-size: var(--title-main-font-size, 72px);
+  font-weight: 300;
+  line-height: 1.12;
+  letter-spacing: .16em;
+  text-align: var(--title-main-align, center);
+  overflow-wrap: anywhere;
+  text-shadow: 0 1px 9px rgba(255,255,255,.24);
+}
+.title-screen-subtitle {
+  left: var(--title-subtitle-x, 75%);
+  top: var(--title-subtitle-y, 21%);
+  width: var(--title-subtitle-width, 46%);
+  margin: 0;
+  transform: translate(-50%, -50%);
+  color: var(--title-subtitle-color, #33434a);
+  font-family: var(--title-subtitle-font-family, var(--game-font-family, sans-serif));
+  font-size: var(--title-subtitle-font-size, 24px);
+  font-weight: 400;
+  line-height: 1.35;
+  letter-spacing: .28em;
+  text-align: var(--title-subtitle-align, center);
+  overflow-wrap: anywhere;
+}
+.title-screen-subtitle[hidden] { display: none !important; }
+.title-screen-menu {
+  left: var(--title-menu-x, 75%);
+  top: var(--title-menu-y, 35%);
+  width: var(--title-menu-width, 36%);
+  display: grid;
+  gap: var(--title-menu-gap, 12px);
+  transform: translate(-50%, 0);
+}
+.title-menu-button {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--title-menu-item-height, 56px);
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--title-menu-text-color, #20282e);
+  font-family: var(--title-menu-font-family, var(--game-font-family, sans-serif));
+  font-size: var(--title-menu-font-size, 26px);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: .14em;
+  text-align: var(--title-menu-align, center);
+  cursor: pointer;
+  transition: color 120ms ease;
+}
+.title-menu-button::before {
+  position: absolute;
+  z-index: -1;
+  inset: 8% -10%;
+  content: "";
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--title-menu-hover-band, rgba(105,184,207,.76)) 22%, var(--title-menu-hover-band, rgba(105,184,207,.76)) 78%, transparent);
+  transform: scaleX(.88);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+.title-menu-button:hover,
+.title-menu-button:focus-visible {
+  color: var(--title-menu-hover-text, #ffffff);
+  outline: none;
+}
+.title-menu-button:hover::before,
+.title-menu-button:focus-visible::before {
+  opacity: 1;
+  transform: scaleX(1);
+}
+.title-menu-button:focus-visible { text-decoration: underline; text-underline-offset: 6px; }
+.title-menu-button:active { color: var(--title-menu-hover-text, #ffffff); }
 
-.title-screen h2, .ending-screen h2 {
+.ending-screen h2 {
   margin: 0;
   font-size: var(--title-font-size, clamp(2rem, 6cqw, 4rem));
   letter-spacing: 0.08em;
@@ -60,7 +153,7 @@
 .primary-button {
   min-width: 190px;
   padding: var(--primary-button-padding-vertical, 14px) var(--primary-button-padding-horizontal, 30px);
-  border: 1px solid rgba(255,255,255,0.55);
+  border: var(--primary-button-border-width, 1px) solid var(--primary-button-border-color, rgba(255,255,255,0.55));
   border-radius: var(--primary-button-border-radius, 3px);
   background: var(--primary-button-background, rgba(28,34,48,0.84));
   color: var(--primary-button-text, inherit);
@@ -86,7 +179,7 @@
   justify-content: center;
   min-height: 46px;
   padding: var(--slap-button-padding-vertical, 9px) var(--slap-button-padding-horizontal, 17px);
-  border: 1px solid rgba(255,255,255,0.3);
+  border: var(--slap-button-border-width, 1px) solid var(--slap-button-border-color, rgba(255,255,255,0.3));
   border-radius: var(--slap-button-border-radius, 3px);
   background: var(--slap-button-background, rgba(23,29,42,0.9));
   color: var(--slap-button-text, #fff);
@@ -102,19 +195,16 @@
 
 
 .option-button {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
   width: var(--option-button-size, 56px);
   height: var(--option-button-size, 56px);
   flex: 0 0 auto;
+  place-items: center;
   padding: 0;
   border: var(--option-button-border-width, 1px) solid var(--option-button-border-color, #fff);
   border-radius: var(--option-button-border-radius, 32px);
   background: var(--option-button-background, rgba(45,117,205,1));
   color: var(--option-button-icon-color, #f5f3f2);
-  line-height: 0;
   cursor: pointer;
   transition: filter 140ms ease, transform 140ms ease;
 }
@@ -122,22 +212,14 @@
 .option-button:active { transform: scale(.96); }
 .option-button:focus-visible { outline: 3px solid currentColor; outline-offset: 4px; }
 .option-button svg {
-  position: absolute;
-  top: 50%;
-  left: 50%;
   display: block;
-  width: 58%;
-  height: 58%;
-  max-width: 32px;
-  max-height: 32px;
-  overflow: visible;
-  transform: translate(-50%, -50%);
+  width: 54%;
+  height: 54%;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.8;
+  stroke-width: 1.65;
   stroke-linecap: round;
   stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
 }
 
 .options-screen {
@@ -157,7 +239,7 @@
   gap: 54px;
   justify-items: center;
   padding: 68px 74px 62px;
-  border: 1px solid rgba(255,255,255,.2);
+  border: var(--options-panel-border-width, 1px) solid var(--options-panel-border-color, rgba(255,255,255,.2));
   border-radius: 12px;
   background: rgba(18, 25, 37, .96);
   box-shadow: 0 28px 90px rgba(0,0,0,.38);
