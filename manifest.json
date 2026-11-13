@@ -31,7 +31,10 @@
       "bgm3": "assets/audio/日常その４.mp3",
       "harisen": "assets/audio/ビシッとツッコミ2.mp3",
       "slap_echo": "assets/audio/鞭で攻撃5.mp3",
-      "wake_up": "assets/audio/キックの衣擦れ2.mp3"
+      "wake_up": "assets/audio/キックの衣擦れ2.mp3",
+      "title_bgm": "assets/audio/薄暮.mp3",
+      "enter": "assets/audio/決定ボタンを押す33.mp3",
+      "ending_bgm": "assets/audio/夕暮れ.mp3"
     }
   },
   "placeholders": {

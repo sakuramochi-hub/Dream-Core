@@ -48,6 +48,50 @@ const DEFAULT_UI_THEME = Object.freeze({
   optionsPanelBorderEnabled: true,
   optionsPanelBorderColor: "#ffffff",
   optionsPanelBorderWidthPx: 1,
+  optionsOverlayBackgroundColor: "#05080e",
+  optionsOverlayBackgroundOpacity: 88,
+  optionsOverlayBlurPx: 8,
+  optionsScreenPaddingPx: 48,
+  optionsPanelBackgroundColor: "#121925",
+  optionsPanelBackgroundOpacity: 96,
+  optionsPanelWidthPx: 760,
+  optionsPanelPaddingVerticalPx: 68,
+  optionsPanelPaddingHorizontalPx: 74,
+  optionsPanelBorderRadiusPx: 12,
+  optionsHeadingGapPx: 54,
+  optionsSettingsGapPx: 38,
+  optionsAudioSettingRowGapPx: 16,
+  optionsAudioSettingColumnGapPx: 24,
+  optionsFontFamily: "inherit",
+  optionsHeadingColor: "#f4f2f0",
+  optionsLabelColor: "#f4f2f0",
+  optionsValueColor: "#b9c7d8",
+  optionsHeadingFontSize: 34,
+  optionsLabelFontSize: 22,
+  optionsValueFontSize: 17,
+  optionsHeadingFontWeight: "600",
+  optionsLabelFontWeight: "600",
+  optionsValueFontWeight: "400",
+  optionsSliderTrackColor: "#394454",
+  optionsSliderFillColor: "#83b9e8",
+  optionsSliderThumbColor: "#f4f2f0",
+  optionsSliderThumbDecoration: "border",
+  optionsSliderThumbDecorationColor: "#e8edf4",
+  optionsSliderThumbBorderWidthPx: 1,
+  optionsSliderTrackHeightPx: 6,
+  optionsSliderTrackRadiusPx: 99,
+  optionsSliderThumbSizePx: 18,
+  optionsSliderThumbRadiusPx: 99,
+  optionsBackButtonTextColor: "#f5f3f2",
+  optionsBackHoverColor: "#83b9e8",
+  optionsBackButtonFontSize: 19,
+  optionsBackButtonFontWeight: "700",
+  optionsBackLetterSpacingPx: 3,
+  optionsBackButtonAlign: "center",
+  optionsHeadingFontFamily: "inherit",
+  optionsLabelFontFamily: "inherit",
+  optionsValueFontFamily: "inherit",
+  optionsBackFontFamily: "inherit",
   dialogueFontSize: 20,
   speakerNameFontSize: 15,
   dialogueSpeakerColumnWidthPx: 180,
@@ -78,6 +122,18 @@ const DEFAULT_UI_THEME = Object.freeze({
   staffHeadingFontSize: 22,
   staffRoleFontSize: 15,
   staffNameFontSize: 25,
+  endingTitleFontFamily: "inherit",
+  endingTitleFontSize: 64,
+  endingTitleFontWeight: "600",
+  endingTitleColor: "#f4f2f0",
+  endingTitleLetterSpacingPx: 5,
+  endingBackFontFamily: "inherit",
+  endingBackFontSize: 20,
+  endingBackFontWeight: "700",
+  endingBackColor: "#f5f3f2",
+  endingBackHoverColor: "#83b9e8",
+  endingBackLetterSpacingPx: 3,
+  endingBackMarginTopPx: 24,
   debugFontSize: 13
 });
 
@@ -86,7 +142,7 @@ const DEFAULT_UI_TEXT = Object.freeze({
   newGameButton: "NEW GAME",
   configButton: "CONFIG",
   slapButton: "頬を叩く",
-  titleButton: "タイトルへ",
+  titleButton: "BACK",
   speedNormal: "倍速 OFF",
   speedFast: "倍速 ON",
   staffHeading: "STAFF",
@@ -94,7 +150,14 @@ const DEFAULT_UI_TEXT = Object.freeze({
   debugAnomaly: "DEBUG｜異変あり",
   debugNormal: "DEBUG｜異変なし",
   loadErrorTitle: "読み込みエラー",
-  reloadStartButton: "再読み込みして開始"
+  reloadStartButton: "再読み込みして開始",
+  optionsHeading: "オプション",
+  optionsButtonLabel: "オプション",
+  optionsBgmLabel: "BGM",
+  optionsSeLabel: "SE",
+  optionsVolumeValueFormat: "{value} / {max}",
+  optionsVolumeOffText: "OFF",
+  optionsBack: "BACK"
 });
 
 const DEFAULT_TITLE_SCREEN_STYLE = Object.freeze({
@@ -134,6 +197,8 @@ export class Game {
     this.encounterLoadId = 0;
     this.loopIntroToken = 0;
     this.optionsReturnFocusTarget = null;
+    this.editorEndingPreviewToken = 0;
+    this.staffRollAnimation = null;
   }
 
   async initialize() {
@@ -292,11 +357,99 @@ export class Game {
         this.renderEditorPreview(event.data);
       } else if (event.data?.type === "G8_EDITOR_SCENARIO_PLAY") {
         this.playEditorScenario(event.data);
+      } else if (event.data?.type === "G8_EDITOR_ENDING_PREVIEW") {
+        this.playEditorEndingPreview(event.data);
       }
     });
 
     if (window.parent !== window) {
       window.parent.postMessage({ type: "G8_EDITOR_PREVIEW_READY" }, window.location.origin);
+    }
+  }
+
+  async playEditorEndingPreview(payload) {
+    const requestId = payload?.requestId;
+    const segment = payload?.segment === "ending-screen" ? "ending-screen" : "staff-to-ending";
+    const presentation = payload?.presentation;
+    if (!presentation || typeof presentation !== "object") return;
+
+    this.staffRollAnimation?.cancel();
+    this.staffRollAnimation = null;
+    const previewToken = ++this.editorEndingPreviewToken;
+    this.cancelScript();
+    this.encounterLoadId += 1;
+    this.loopIntroToken += 1;
+    this.audioManager?.stopBgm();
+
+    this.config = {
+      ...this.config,
+      ...presentation,
+      uiText: { ...this.config?.uiText, ...presentation.uiText },
+      uiTheme: { ...this.config?.uiTheme, ...presentation.uiTheme },
+      settings: { ...this.config?.settings, ...presentation.settings }
+    };
+    await applyFontSettings(this.config.fontSettings);
+    if (previewToken !== this.editorEndingPreviewToken) return;
+    this.applyUiText();
+    this.applyUiTheme();
+
+    this.dom.game.classList.remove("at-title", "at-ending", "at-staff-roll");
+    this.dom.titleScreen.hidden = true;
+    this.dom.endingScreen.hidden = true;
+    this.dom.staffRollScreen.hidden = true;
+    this.dom.loopIntroScreen.hidden = true;
+    this.dom.screenTransitionCover.hidden = true;
+    this.dom.screenTransitionCover.style.removeProperty("opacity");
+    this.dom.dialoguePanel.hidden = true;
+    this.dom.judgmentPanel.hidden = true;
+    this.dom.debugIndicator.hidden = true;
+    this.dom.optionsButton.hidden = true;
+    this.dom.optionsScreen.hidden = true;
+    this.dom.speedButton.hidden = true;
+    this.dom.slapButton.disabled = true;
+    this.dialogueBox.setJudgmentEnabled(false);
+    this.dialogueBox.hide();
+    this.sceneRenderer.clearScene();
+
+    this.dom.endingScreenTitle.textContent = this.config.endingScreenTitle || this.ending?.title || this.getUiText("defaultEndingTitle");
+    this.setEndingScreenBackground();
+
+    try {
+      if (segment === "staff-to-ending" && this.renderStaffRoll()) {
+        this.setStaffRollBackground();
+        await this.setScreenBgm(this.config.staffRollBgm);
+        if (previewToken !== this.editorEndingPreviewToken) return;
+        const completed = await this.playStaffRoll(() => previewToken === this.editorEndingPreviewToken);
+        if (!completed || previewToken !== this.editorEndingPreviewToken) return;
+        await this.transitionStaffRollToEnding(() => previewToken === this.editorEndingPreviewToken);
+      } else {
+        this.dom.staffRollScreen.hidden = true;
+        await this.setScreenBgm(this.config.endingScreenBgm);
+        if (previewToken !== this.editorEndingPreviewToken) return;
+        this.dom.game.classList.add("at-ending");
+        this.dom.endingScreen.hidden = false;
+      }
+      if (previewToken !== this.editorEndingPreviewToken) return;
+      if (window.parent !== window) {
+        window.parent.postMessage({
+          type: "G8_EDITOR_ENDING_PREVIEW_FINISHED",
+          requestId,
+          segment,
+          status: "completed"
+        }, window.location.origin);
+      }
+    } catch (error) {
+      if (previewToken !== this.editorEndingPreviewToken) return;
+      console.error(error);
+      if (window.parent !== window) {
+        window.parent.postMessage({
+          type: "G8_EDITOR_ENDING_PREVIEW_FINISHED",
+          requestId,
+          segment,
+          status: "error",
+          message: error?.message || String(error)
+        }, window.location.origin);
+      }
     }
   }
 
@@ -405,7 +558,7 @@ export class Game {
       "title-screen", "title-screen-background", "title-screen-title", "title-screen-main-title", "title-screen-subtitle", "title-screen-menu", "start-button", "title-config-button", "staff-roll-screen", "staff-roll-background", "staff-roll",
       "ending-screen", "ending-screen-background", "ending-screen-title", "title-button", "screen-transition-cover",
       "loop-intro-screen", "loop-intro-text", "debug-indicator", "judgment-panel", "slap-button", "slap-button-label",
-      "options-button", "options-screen", "options-close-button", "bgm-volume-input", "se-volume-input", "bgm-volume-value", "se-volume-value", "speed-button", "game-title",
+      "options-button", "options-screen", "options-heading", "options-back-link", "bgm-volume-label", "se-volume-label", "bgm-volume-input", "se-volume-input", "bgm-volume-value", "se-volume-value", "speed-button", "game-title",
       "loading-screen", "loading-label", "loading-progress-track", "loading-progress-bar", "loading-progress-percent", "loading-retry-button"
     ];
     for (const id of ids) this.dom[this.toCamelCase(id)] = document.getElementById(id);
@@ -417,6 +570,7 @@ export class Game {
 
   getUiText(key) {
     const value = this.config?.uiText?.[key];
+    if (key === "titleButton" && value === "タイトルへ") return DEFAULT_UI_TEXT.titleButton;
     return value == null ? (DEFAULT_UI_TEXT[key] ?? "") : String(value);
   }
 
@@ -425,6 +579,13 @@ export class Game {
     this.dom.titleConfigButton.textContent = this.getUiText("configButton");
     this.dom.slapButtonLabel.textContent = this.getUiText("slapButton");
     this.dom.titleButton.textContent = this.getUiText("titleButton");
+    this.dom.optionsHeading.textContent = this.getUiText("optionsHeading");
+    const optionsButtonLabel = this.getUiText("optionsButtonLabel");
+    this.dom.optionsButton.setAttribute("aria-label", optionsButtonLabel);
+    this.dom.optionsButton.title = optionsButtonLabel;
+    this.dom.bgmVolumeLabel.textContent = this.getUiText("optionsBgmLabel");
+    this.dom.seVolumeLabel.textContent = this.getUiText("optionsSeLabel");
+    this.dom.optionsBackLink.textContent = this.getUiText("optionsBack");
     this.updatePlaybackSpeedButtonLabel();
   }
 
@@ -458,6 +619,7 @@ export class Game {
     const fontSize = (key) => {
       const fallback = DEFAULT_UI_THEME[key];
       let configured = this.config?.uiTheme?.[key];
+      if (configured == null && key === "endingTitleFontSize") configured = this.config?.uiTheme?.titleFontSize;
       if (configured == null) {
         const legacyScale = Number(this.config?.uiTheme?.[key.replace("FontSize", "FontScale")]);
         if (Number.isFinite(legacyScale)) configured = fallback * legacyScale / 100;
@@ -513,13 +675,107 @@ export class Game {
     root.style.setProperty("--option-button-icon-color", normalizeHex(theme.optionButtonIconColor, DEFAULT_UI_THEME.optionButtonIconColor));
     root.style.setProperty("--option-button-background", rgba(theme.optionButtonBackgroundColor, theme.optionButtonBackgroundOpacity));
 
-    // Old projects only have one shared border setting. Use it as the initial
-    // value for each component until an individual setting is saved.
+    const normalizeOptionsFontFamily = (value, fallback) => {
+      const candidate = String(value ?? "inherit").trim();
+      if (!candidate || candidate.toLowerCase() === "inherit") return fallback;
+      return candidate.length <= 240 && /^[\p{L}\p{M}\p{N}\s"'(),._-]+$/u.test(candidate)
+        ? candidate : fallback;
+    };
+    const safeOptionsFontFamily = normalizeOptionsFontFamily(
+      theme.optionsFontFamily, "var(--game-font-family, sans-serif)"
+    );
+    const optionsHeadingFontFamily = normalizeOptionsFontFamily(theme.optionsHeadingFontFamily, safeOptionsFontFamily);
+    const optionsLabelFontFamily = normalizeOptionsFontFamily(theme.optionsLabelFontFamily, safeOptionsFontFamily);
+    const optionsValueFontFamily = normalizeOptionsFontFamily(theme.optionsValueFontFamily, safeOptionsFontFamily);
+    const optionsBackFontFamily = normalizeOptionsFontFamily(theme.optionsBackFontFamily, safeOptionsFontFamily);
+    const endingTitleFontFamily = normalizeOptionsFontFamily(theme.endingTitleFontFamily, "var(--game-font-family, sans-serif)");
+    const endingBackFontFamily = normalizeOptionsFontFamily(theme.endingBackFontFamily, "var(--game-font-family, sans-serif)");
+    const safeFontWeight = (key, fallback) => {
+      const value = String(theme[key] ?? fallback);
+      return ["300", "400", "500", "600", "700", "800", "900"].includes(value) ? value : fallback;
+    };
+    const safeBackButtonAlign = ["start", "center", "end"].includes(theme.optionsBackButtonAlign)
+      ? theme.optionsBackButtonAlign : "center";
+    // Old projects may only define a shared border or the primary-button theme.
     const legacyBorder = {
       enabled: configuredTheme.uiBorderEnabled !== false && configuredTheme.uiBorderEnabled !== "false",
       color: configuredTheme.uiBorderColor ?? "#ffffff",
       width: configuredTheme.uiBorderWidthPx ?? 1
     };
+    root.style.setProperty("--options-overlay-background", rgba(theme.optionsOverlayBackgroundColor, theme.optionsOverlayBackgroundOpacity));
+    root.style.setProperty("--options-overlay-blur", areaPx("optionsOverlayBlurPx", 0, 40));
+    root.style.setProperty("--options-screen-padding", areaPx("optionsScreenPaddingPx", 0, 160));
+    root.style.setProperty("--options-panel-background", rgba(theme.optionsPanelBackgroundColor, theme.optionsPanelBackgroundOpacity));
+    root.style.setProperty("--options-panel-width", areaPx("optionsPanelWidthPx", 360, 1600));
+    root.style.setProperty("--options-panel-padding-vertical", areaPx("optionsPanelPaddingVerticalPx", 0, 240));
+    root.style.setProperty("--options-panel-padding-horizontal", areaPx("optionsPanelPaddingHorizontalPx", 0, 240));
+    root.style.setProperty("--options-panel-radius", areaPx("optionsPanelBorderRadiusPx", 0, 120));
+    root.style.setProperty("--options-heading-gap", areaPx("optionsHeadingGapPx", 0, 200));
+    root.style.setProperty("--options-settings-gap", areaPx("optionsSettingsGapPx", 0, 200));
+    root.style.setProperty("--options-audio-row-gap", areaPx("optionsAudioSettingRowGapPx", 0, 120));
+    root.style.setProperty("--options-audio-column-gap", areaPx("optionsAudioSettingColumnGapPx", 0, 120));
+    root.style.setProperty("--options-font-family", safeOptionsFontFamily);
+    root.style.setProperty("--options-heading-font-family", optionsHeadingFontFamily);
+    root.style.setProperty("--options-label-font-family", optionsLabelFontFamily);
+    root.style.setProperty("--options-value-font-family", optionsValueFontFamily);
+    root.style.setProperty("--options-heading-color", normalizeHex(theme.optionsHeadingColor, DEFAULT_UI_THEME.optionsHeadingColor));
+    root.style.setProperty("--options-label-color", normalizeHex(theme.optionsLabelColor, DEFAULT_UI_THEME.optionsLabelColor));
+    root.style.setProperty("--options-value-color", normalizeHex(theme.optionsValueColor, DEFAULT_UI_THEME.optionsValueColor));
+    root.style.setProperty("--options-heading-font-size", fontSize("optionsHeadingFontSize"));
+    root.style.setProperty("--options-label-font-size", fontSize("optionsLabelFontSize"));
+    root.style.setProperty("--options-value-font-size", fontSize("optionsValueFontSize"));
+    root.style.setProperty("--options-heading-font-weight", safeFontWeight("optionsHeadingFontWeight", "600"));
+    root.style.setProperty("--options-label-font-weight", safeFontWeight("optionsLabelFontWeight", "600"));
+    root.style.setProperty("--options-value-font-weight", safeFontWeight("optionsValueFontWeight", "400"));
+    root.style.setProperty("--options-slider-track-color", normalizeHex(theme.optionsSliderTrackColor, DEFAULT_UI_THEME.optionsSliderTrackColor));
+    root.style.setProperty("--options-slider-fill-color", normalizeHex(theme.optionsSliderFillColor, DEFAULT_UI_THEME.optionsSliderFillColor));
+    root.style.setProperty("--options-slider-thumb-color", normalizeHex(theme.optionsSliderThumbColor, DEFAULT_UI_THEME.optionsSliderThumbColor));
+    const sliderThumbDecoration = theme.optionsSliderThumbDecoration === "shadow" ? "shadow" : "border";
+    const sliderThumbDecorationColor = normalizeHex(
+      theme.optionsSliderThumbDecorationColor,
+      DEFAULT_UI_THEME.optionsSliderThumbDecorationColor
+    );
+    root.style.setProperty(
+      "--options-slider-thumb-border",
+      sliderThumbDecoration === "border"
+        ? `${areaPx("optionsSliderThumbBorderWidthPx", 0, 8)} solid ${sliderThumbDecorationColor}`
+        : "0 solid transparent"
+    );
+    root.style.setProperty(
+      "--options-slider-thumb-shadow",
+      sliderThumbDecoration === "shadow" ? `0 1px 5px ${rgba(sliderThumbDecorationColor, 35)}` : "none"
+    );
+    root.style.setProperty("--options-slider-track-height", areaPx("optionsSliderTrackHeightPx", 1, 32));
+    root.style.setProperty("--options-slider-track-radius", areaPx("optionsSliderTrackRadiusPx", 0, 120));
+    root.style.setProperty("--options-slider-thumb-size", areaPx("optionsSliderThumbSizePx", 8, 64));
+    root.style.setProperty("--options-slider-thumb-radius", areaPx("optionsSliderThumbRadiusPx", 0, 120));
+    root.style.setProperty("--options-back-link-text", normalizeHex(
+      configuredTheme.optionsBackButtonTextColor ?? theme.primaryButtonTextColor,
+      DEFAULT_UI_THEME.primaryButtonTextColor
+    ));
+    root.style.setProperty("--options-back-link-hover", normalizeHex(
+      theme.optionsBackHoverColor, DEFAULT_UI_THEME.optionsBackHoverColor
+    ));
+    root.style.setProperty("--options-back-link-font-family", optionsBackFontFamily);
+    root.style.setProperty("--options-back-link-font-size", fontSize("optionsBackButtonFontSize"));
+    root.style.setProperty("--options-back-link-font-weight", safeFontWeight("optionsBackButtonFontWeight", "700"));
+    root.style.setProperty("--options-back-link-letter-spacing", areaPx("optionsBackLetterSpacingPx", 0, 20));
+    root.style.setProperty("--options-back-link-align", safeBackButtonAlign);
+    root.style.setProperty("--ending-title-font-family", endingTitleFontFamily);
+    root.style.setProperty("--ending-title-font-size", fontSize("endingTitleFontSize"));
+    root.style.setProperty("--ending-title-font-weight", safeFontWeight("endingTitleFontWeight", "600"));
+    root.style.setProperty("--ending-title-letter-spacing", areaPx("endingTitleLetterSpacingPx", 0, 30));
+    root.style.setProperty("--ending-title-color", normalizeHex(theme.endingTitleColor, DEFAULT_UI_THEME.endingTitleColor));
+    root.style.setProperty("--ending-back-font-family", endingBackFontFamily);
+    root.style.setProperty("--ending-back-font-size", fontSize("endingBackFontSize"));
+    root.style.setProperty("--ending-back-font-weight", safeFontWeight("endingBackFontWeight", "700"));
+    root.style.setProperty("--ending-back-color", normalizeHex(theme.endingBackColor, DEFAULT_UI_THEME.endingBackColor));
+    root.style.setProperty("--ending-back-hover-color", normalizeHex(theme.endingBackHoverColor, DEFAULT_UI_THEME.endingBackHoverColor));
+    root.style.setProperty("--ending-back-letter-spacing", areaPx("endingBackLetterSpacingPx", 0, 30));
+    root.style.setProperty("--ending-back-margin-top", areaPx("endingBackMarginTopPx", 0, 200));
+
+    // Old projects only have one shared border setting. Use it as the initial
+    // value for each component until an individual setting is saved.
     const borderGroups = [
       ["dialoguePanel", "dialogue-panel"],
       ["primaryButton", "primary-button"],
@@ -653,8 +909,14 @@ export class Game {
     const se = this.audioManager.seVolumeLevel;
     this.dom.bgmVolumeInput.value = String(bgm);
     this.dom.seVolumeInput.value = String(se);
-    this.dom.bgmVolumeValue.textContent = bgm === 0 ? "OFF" : `${bgm} / 10`;
-    this.dom.seVolumeValue.textContent = se === 0 ? "OFF" : `${se} / 10`;
+    const format = this.getUiText("optionsVolumeValueFormat");
+    const offText = this.getUiText("optionsVolumeOffText");
+    const formatValue = (value) => value === 0 ? offText
+      : format.replaceAll("{value}", String(value)).replaceAll("{max}", "10");
+    this.dom.bgmVolumeValue.textContent = formatValue(bgm);
+    this.dom.seVolumeValue.textContent = formatValue(se);
+    this.dom.bgmVolumeInput.style.setProperty("--range-progress", `${bgm * 10}%`);
+    this.dom.seVolumeInput.style.setProperty("--range-progress", `${se * 10}%`);
   }
 
   setAudioVolume(kind, value) {
@@ -696,12 +958,23 @@ export class Game {
 
   bindEvents() {
     this.dom.startButton.addEventListener("click", () => this.startNewGame());
-    this.dom.titleConfigButton.addEventListener("click", () => this.openOptions(this.dom.titleConfigButton));
+    this.dom.titleConfigButton.addEventListener("click", () => {
+      this.playUiSound("titleConfigSoundEffect");
+      this.openOptions(this.dom.titleConfigButton);
+    });
     this.dom.loadingRetryButton.addEventListener("click", () => window.location.reload());
-    this.dom.titleButton.addEventListener("click", () => this.returnToTitle());
+    this.dom.titleButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (this.dom.game.classList.contains("editor-preview-mode")) return;
+      this.returnToTitle();
+    });
     this.dom.slapButton.addEventListener("click", () => this.submitChoice("slap"));
     this.dom.optionsButton.addEventListener("click", () => this.openOptions());
-    this.dom.optionsCloseButton.addEventListener("click", () => this.closeOptions());
+    this.dom.optionsBackLink.addEventListener("click", (event) => {
+      event.preventDefault();
+      this.playUiSound("optionsBackSoundEffect");
+      this.closeOptions();
+    });
     this.dom.optionsScreen.addEventListener("click", (event) => event.stopPropagation());
     this.dom.bgmVolumeInput.addEventListener("input", (event) => this.setAudioVolume("bgm", event.currentTarget.value));
     this.dom.seVolumeInput.addEventListener("input", (event) => this.setAudioVolume("se", event.currentTarget.value));
@@ -749,9 +1022,51 @@ export class Game {
     this.dom.loadingProgressPercent.textContent = `${value}%`;
   }
 
+  playUiSound(settingKey) {
+    const soundKey = String(this.config?.settings?.[settingKey] ?? "").trim();
+    if (soundKey) void this.audioManager?.playEffect(soundKey);
+  }
+
+  async animateScreenTransitionCover(fromOpacity, toOpacity, durationMs, easing = "ease-in-out") {
+    const cover = this.dom.screenTransitionCover;
+    if (!cover) return;
+    const duration = Math.max(0, Math.min(10000, Math.round(Number(durationMs) || 0)));
+    cover.hidden = false;
+    cover.style.opacity = String(fromOpacity);
+    if (duration === 0) {
+      cover.style.opacity = String(toOpacity);
+      return;
+    }
+    void cover.offsetWidth;
+    const animation = cover.animate(
+      [{ opacity: fromOpacity }, { opacity: toOpacity }],
+      { duration, easing, fill: "forwards" }
+    );
+    this.playbackClock.applyAnimationRate(animation);
+    try {
+      await animation.finished;
+    } catch (error) {
+      // Keep the transition state deterministic if an animation is interrupted.
+    } finally {
+      cover.style.opacity = String(toOpacity);
+      animation.cancel();
+    }
+  }
+
   async startNewGame() {
     if (this.inputLocked) return;
     this.inputLocked = true;
+    this.playUiSound("titleNewGameSoundEffect");
+
+    const settings = this.config?.settings || {};
+    const fadeToBlackMs = settings.titleOpeningFadeToBlackMs ?? 1200;
+    const bgmFadeOutMs = settings.titleOpeningBgmFadeOutMs ?? 1400;
+    const revealFromBlackMs = settings.titleOpeningRevealMs ?? 500;
+    const dialogueDelayMs = settings.titleOpeningDialogueDelayMs ?? 350;
+    const dialogueTextDelayMs = settings.titleOpeningDialogueTextDelayMs ?? 300;
+    const fadeToBlack = this.animateScreenTransitionCover(0, 1, fadeToBlackMs, "ease-in");
+    const fadeOutBgm = this.audioManager?.fadeOutBgm(bgmFadeOutMs) ?? Promise.resolve(false);
+    await Promise.all([fadeToBlack, fadeOutBgm]);
     this.audioManager?.stopBgm();
 
     this.dom.titleScreen.hidden = true;
@@ -766,8 +1081,6 @@ export class Game {
     this.dom.optionsButton.setAttribute("aria-expanded", "false");
     this.dom.endingScreen.hidden = true;
     this.dom.staffRollScreen.hidden = true;
-    this.dom.screenTransitionCover.hidden = true;
-    this.dom.screenTransitionCover.style.removeProperty("opacity");
     this.dom.debugIndicator.hidden = true;
     this.dom.judgmentPanel.hidden = true;
     this.dialogueBox.setJudgmentEnabled(false);
@@ -776,13 +1089,27 @@ export class Game {
     this.dialogueBox.hide();
 
     try {
-      await this.playScript(this.opening.script, "OPENING");
+      this.dialogueBox.holdNextLine({ textDelayMs: dialogueTextDelayMs });
+      const openingOutcome = this.playScript(this.opening.script, "OPENING").then(
+        (completed) => ({ completed }),
+        (error) => ({ error })
+      );
+      await this.animateScreenTransitionCover(1, 0, revealFromBlackMs, "ease-out");
+      this.dom.screenTransitionCover.hidden = true;
+      this.dom.screenTransitionCover.style.removeProperty("opacity");
+      if (dialogueDelayMs > 0) await this.playbackClock.wait(dialogueDelayMs);
+      this.dialogueBox.releaseHeldLine();
+      const openingResult = await openingOutcome;
+      this.dialogueBox.clearNextLineGate();
+      if (openingResult.error) throw openingResult.error;
       this.state.beginLoop();
       this.dom.loopIntroScreen.hidden = true;
       this.dom.judgmentPanel.hidden = true;
       this.inputLocked = false;
       this.loadAndPlayEncounter().catch((error) => this.showFatalError(error));
     } catch (error) {
+      this.dialogueBox.releaseHeldLine();
+      this.dialogueBox.clearNextLineGate();
       this.showFatalError(error);
     } finally {
       this.inputLocked = false;
@@ -1093,9 +1420,9 @@ export class Game {
     this.dom.endingScreenBackground.style.backgroundColor = fallback || "#0d1220";
   }
 
-  async playStaffRoll() {
+  async playStaffRoll(shouldContinue = () => true) {
     const content = this.dom.staffRoll.querySelector(".staff-roll-content");
-    if (!content) return;
+    if (!content) return false;
 
     this.dom.game.classList.add("at-staff-roll");
     this.dom.staffRollScreen.hidden = false;
@@ -1105,10 +1432,18 @@ export class Game {
     const viewportHeight = this.dom.staffRollScreen.clientHeight || 1080;
     const contentHeight = content.offsetHeight;
     const travelDistance = viewportHeight + contentHeight;
-    const durationMs = Math.max(12000, (travelDistance / 55) * 1000);
+    const staffRollScrollSpeedPxPerSecond = 55;
+    const minimumStaffRollDurationMs = 12000;
+    const durationMs = Math.max(
+      minimumStaffRollDurationMs,
+      (travelDistance / staffRollScrollSpeedPxPerSecond) * 1000
+    );
 
     // Web Animations API avoids CSS animation overrides and reduced-motion
-    // styles that previously left short credits parked at the top.
+    // styles that previously left short credits parked at the top. The credits
+    // scroll is deliberately independent from the gameplay fast-forward rate:
+    // editor preview and the actual ending must have the same pacing even when
+    // the player reached the ending while 2x playback was enabled.
     content.style.animation = "none";
     const animation = content.animate(
       [
@@ -1121,17 +1456,20 @@ export class Game {
         fill: "forwards"
       }
     );
-    this.playbackClock.applyAnimationRate(animation);
+    this.staffRollAnimation = animation;
+    animation.playbackRate = 1;
 
     try {
       await animation.finished;
     } catch (error) {
       // A canceled animation should not trap the game on the staff-roll screen.
+    } finally {
+      if (this.staffRollAnimation === animation) this.staffRollAnimation = null;
     }
-
+    return shouldContinue();
   }
 
-  async transitionStaffRollToEnding() {
+  async transitionStaffRollToEnding(shouldContinue = () => true) {
     const staffRoll = this.dom.staffRollScreen;
     const ending = this.dom.endingScreen;
     const cover = this.dom.screenTransitionCover;
@@ -1154,12 +1492,23 @@ export class Game {
     } catch (error) {
       // Continue the screen swap even if the animation is interrupted.
     }
+    if (!shouldContinue()) {
+      fadeToBlack.cancel();
+      return false;
+    }
     cover.style.opacity = "1";
     fadeToBlack.cancel();
 
     // Swap the screens only while the opaque cover guarantees that no frame
-    // of the previous gameplay scene can become visible.
-    await this.setScreenBgm(this.config.endingScreenBgm);
+    // of the previous gameplay scene can become visible. Keep the staff-roll
+    // track running when explicitly requested and an actual staff-roll BGM is set.
+    const continueStaffRollBgm = (
+      this.config.settings?.continueStaffRollBgmToEnding === true
+      || this.config.settings?.continueStaffRollBgmToEnding === "true"
+    ) && Boolean(String(this.config.staffRollBgm ?? "").trim());
+    if (!continueStaffRollBgm) {
+      await this.setScreenBgm(this.config.endingScreenBgm);
+    }
     staffRoll.hidden = true;
     staffRoll.style.removeProperty("opacity");
     this.dom.game.classList.remove("at-staff-roll");
@@ -1167,6 +1516,7 @@ export class Game {
     ending.style.opacity = "1";
     ending.hidden = false;
     await new Promise((resolve) => requestAnimationFrame(resolve));
+    if (!shouldContinue()) return false;
 
     const fadeFromBlack = cover.animate(
       [{ opacity: 1 }, { opacity: 0 }],
@@ -1178,6 +1528,10 @@ export class Game {
     } catch (error) {
       // The ending screen remains the final screen if the fade is interrupted.
     } finally {
+      if (!shouldContinue()) {
+        fadeFromBlack.cancel();
+        return false;
+      }
       cover.style.opacity = "0";
       fadeFromBlack.cancel();
       cover.hidden = true;

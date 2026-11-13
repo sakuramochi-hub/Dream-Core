@@ -87,7 +87,7 @@
         <section id="ending-screen" class="ending-screen" hidden>
           <div id="ending-screen-background" class="ending-screen-background" aria-hidden="true"></div>
           <h2 id="ending-screen-title">八つ目の放課後</h2>
-          <button id="title-button" class="primary-button" type="button">タイトルへ</button>
+          <a id="title-button" class="ending-back-link" href="#">BACK</a>
         </section>
         <div id="screen-transition-cover" class="screen-transition-cover" hidden aria-hidden="true"></div>
         <section id="loop-intro-screen" class="loop-intro-screen" hidden aria-live="polite" aria-atomic="true">
@@ -101,17 +101,17 @@
             <h2 id="options-heading">オプション</h2>
             <div class="options-audio-settings">
               <div class="options-audio-setting">
-                <label for="bgm-volume-input">BGM</label>
+                <label id="bgm-volume-label" for="bgm-volume-input">BGM</label>
                 <output id="bgm-volume-value" for="bgm-volume-input">10 / 10</output>
                 <input id="bgm-volume-input" type="range" min="0" max="10" step="1" value="10">
               </div>
               <div class="options-audio-setting">
-                <label for="se-volume-input">SE</label>
+                <label id="se-volume-label" for="se-volume-input">SE</label>
                 <output id="se-volume-value" for="se-volume-input">10 / 10</output>
                 <input id="se-volume-input" type="range" min="0" max="10" step="1" value="10">
               </div>
             </div>
-            <button id="options-close-button" class="primary-button" type="button">戻る</button>
+            <a id="options-back-link" class="options-back-link" href="#">BACK</a>
           </div>
         </section>
     <footer class="game-footer">

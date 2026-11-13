@@ -51,6 +51,9 @@ export class DialogueBox {
     this.getCharacterInterval = getCharacterInterval;
     this.playbackClock = playbackClock;
     this.pendingResolve = null;
+    this.nextLineGate = null;
+    this.textStartWait = null;
+    this.lineReady = false;
     this.typing = false;
     this.typingWait = null;
     this.typingToken = 0;
@@ -81,17 +84,44 @@ export class DialogueBox {
     this.text.scrollTop = this.text.scrollHeight;
   }
 
-  setLine({ speaker = "", text = "", tag = "STORY" }, { instant = false } = {}) {
+  setLine({ speaker = "", text = "", tag = "STORY" }, { instant = false, deferVisibility = false } = {}) {
     this.stopTyping();
+    this.textStartWait?.cancel?.();
+    this.textStartWait = null;
+    this.lineReady = Boolean(instant);
+    this.panel.style.removeProperty("opacity");
     this.speaker.textContent = speaker;
     this.textNode = document.createTextNode(instant ? String(text ?? "") : "");
     this.endIndicator.hidden = !instant;
     this.text.replaceChildren(this.textNode, this.endIndicator);
     this.sceneTag.textContent = tag;
     this.text.scrollTop = 0;
-    this.panel.hidden = false;
+    this.panel.hidden = Boolean(deferVisibility);
     this.syncJudgmentVisibility();
   }
+
+  holdNextLine({ textDelayMs = 0 } = {}) {
+    const delay = Number.isFinite(Number(textDelayMs))
+      ? Math.max(0, Math.min(10000, Math.round(Number(textDelayMs))))
+      : 0;
+    this.nextLineGate = { released: false, textDelayMs: delay, start: null };
+  }
+
+  releaseHeldLine() {
+    const gate = this.nextLineGate;
+    if (!gate) return;
+    gate.released = true;
+    if (!gate.start) return;
+    const start = gate.start;
+    gate.start = null;
+    this.nextLineGate = null;
+    start();
+  }
+
+  clearNextLineGate() {
+    this.nextLineGate = null;
+  }
+
 
   startTyping(value) {
     this.characters = splitCharacters(value);
@@ -160,17 +190,50 @@ export class DialogueBox {
   }
 
   showLine(line) {
-    this.setLine(line);
+    const gate = this.nextLineGate;
+    const deferred = Boolean(gate && !gate.released);
+    this.setLine(line, { deferVisibility: deferred });
 
+    let resolveLine;
     const promise = new Promise((resolve) => {
+      resolveLine = resolve;
       this.pendingResolve = resolve;
     });
-    this.startTyping(line?.text ?? "");
+    const beginLine = () => {
+      if (this.pendingResolve !== resolveLine) return;
+      this.panel.hidden = false;
+      this.syncJudgmentVisibility();
+      const textDelay = gate?.textDelayMs ?? 0;
+      if (textDelay > 0) {
+        const wait = this.playbackClock.wait(textDelay);
+        this.textStartWait = wait;
+        wait.then(() => {
+          if (this.textStartWait !== wait || this.pendingResolve !== resolveLine) return;
+          this.textStartWait = null;
+          this.beginLineText(line);
+        });
+      } else {
+        this.beginLineText(line);
+      }
+    };
+
+    if (deferred) {
+      gate.start = beginLine;
+    } else {
+      if (gate) this.nextLineGate = null;
+      beginLine();
+    }
     return promise;
   }
 
-  advance() {
+  beginLineText(line) {
     if (!this.pendingResolve) return;
+    this.lineReady = true;
+    this.startTyping(line?.text ?? "");
+  }
+
+  advance() {
+    if (!this.pendingResolve || !this.lineReady) return;
     if (this.typing) {
       this.finishTyping();
       return;
@@ -183,6 +246,10 @@ export class DialogueBox {
 
   cancelPendingLine() {
     this.stopTyping();
+    this.textStartWait?.cancel?.();
+    this.textStartWait = null;
+    this.lineReady = false;
+    if (this.nextLineGate) this.nextLineGate.start = null;
     if (!this.pendingResolve) return;
     const resolve = this.pendingResolve;
     this.pendingResolve = null;
@@ -191,6 +258,10 @@ export class DialogueBox {
 
   hide() {
     this.stopTyping();
+    this.textStartWait?.cancel?.();
+    this.textStartWait = null;
+    this.lineReady = false;
+    this.panel.style.removeProperty("opacity");
     this.panel.hidden = true;
     this.syncJudgmentVisibility();
     this.pendingResolve = null;
