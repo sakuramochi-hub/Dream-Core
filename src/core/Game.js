@@ -223,7 +223,7 @@ export class Game {
     this.updateLoadingProgress(8);
 
     await applyFontSettings(config.fontSettings);
-    if (!editorPreview) await this.waitForFonts();
+    const fontsReady = editorPreview ? Promise.resolve() : this.waitForFonts();
     this.updateLoadingProgress(14);
 
     [this.opening, this.ending, this.scenarioIndex] = await Promise.all([
@@ -296,6 +296,7 @@ export class Game {
       scenarioIndex: this.scenarioIndex,
       onProgress: (percent) => this.updateLoadingProgress(20 + percent * 0.79)
     });
+    await fontsReady;
 
     this.applyTitleScreenBackground();
     this.updateLoadingProgress(100);

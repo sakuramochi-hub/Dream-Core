@@ -2,26 +2,26 @@
   "version": 1,
   "assets": {
     "backgrounds": {
-      "room": "assets/backgrounds/一人部屋３（日中）.jpg",
-      "town": "assets/backgrounds/住宅街２（日中）.jpg",
-      "school": "assets/backgrounds/学校のベンチ（日中）.jpg",
-      "cafe": "assets/backgrounds/喫茶店（日中）.jpg",
-      "mall": "assets/backgrounds/ショッピングモール.jpg",
-      "park": "assets/backgrounds/池のある公園（夕方）.jpg"
+      "room": "assets/backgrounds/一人部屋３（日中）.webp",
+      "town": "assets/backgrounds/住宅街２（日中）.webp",
+      "school": "assets/backgrounds/学校のベンチ（日中）.webp",
+      "cafe": "assets/backgrounds/喫茶店（日中）.webp",
+      "mall": "assets/backgrounds/ショッピングモール.webp",
+      "park": "assets/backgrounds/池のある公園（夕方）.webp"
     },
     "characters": {
       "heroine": {
-        "normal": "assets/characters/josei_07_a.png",
-        "smile": "assets/characters/josei_07_h.png",
-        "talk": "assets/characters/josei_07_b.png",
-        "surprised": "assets/characters/josei_07_d.png",
-        "shame": "assets/characters/josei_07_f.png",
-        "trouble": "assets/characters/josei_07_e.png"
+        "normal": "assets/characters/josei_07_a.webp",
+        "smile": "assets/characters/josei_07_h.webp",
+        "talk": "assets/characters/josei_07_b.webp",
+        "surprised": "assets/characters/josei_07_d.webp",
+        "shame": "assets/characters/josei_07_f.webp",
+        "trouble": "assets/characters/josei_07_e.webp"
       },
       "god": {
-        "normal": "assets/characters/teddybear_blue_a.png",
-        "angry": "assets/characters/teddybear_blue_e.png",
-        "smile": "assets/characters/teddybear_blue_b.png"
+        "normal": "assets/characters/teddybear_blue_a.webp",
+        "angry": "assets/characters/teddybear_blue_e.webp",
+        "smile": "assets/characters/teddybear_blue_b.webp"
       }
     },
     "audio": {
