@@ -265,12 +265,18 @@ export class AudioManager {
   }
 
   async startBgm() {
-    if (!this.bgmPlayer || !this.bgmPlayer.paused) return;
-    this.setPlayerVolume(this.bgmPlayer, this.getBgmGain(), true);
-    this.setPlayerFadeGain(this.bgmPlayer, 1, true);
-    await this.resumeAudioContext();
+    const audio = this.bgmPlayer;
+    if (!audio || !audio.paused) return;
+    this.setPlayerVolume(audio, this.getBgmGain(), true);
+    this.setPlayerFadeGain(audio, 1, true);
+
+    // Both operations are initiated before the first await. In particular,
+    // play() must run in the original click gesture on browsers with autoplay
+    // restrictions; waiting for AudioContext.resume() first can lose that gesture.
+    const contextResume = this.resumeAudioContext();
     try {
-      await this.bgmPlayer.play();
+      const playback = audio.play();
+      await Promise.all([contextResume, playback]);
     } catch (error) {
       console.warn(`BGM ${this.bgmKey} を再生できませんでした`, error);
     }

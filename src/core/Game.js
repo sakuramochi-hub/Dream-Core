@@ -199,6 +199,7 @@ export class Game {
     this.optionsReturnFocusTarget = null;
     this.editorEndingPreviewToken = 0;
     this.staffRollAnimation = null;
+    this.startupStartConsumed = false;
   }
 
   async initialize() {
@@ -302,8 +303,9 @@ export class Game {
     this.updateLoadingProgress(100);
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     this.dom.loadingScreen.hidden = true;
-    this.dom.titleScreen.hidden = false;
-    this.setScreenBgm(config.titleScreenBgm);
+    this.dom.titleScreen.hidden = true;
+    this.dom.startupStartScreen.hidden = false;
+    this.startupStartConsumed = false;
   }
 
   async waitForFonts() {
@@ -560,7 +562,8 @@ export class Game {
       "ending-screen", "ending-screen-background", "ending-screen-title", "title-button", "screen-transition-cover",
       "loop-intro-screen", "loop-intro-text", "debug-indicator", "judgment-panel", "slap-button", "slap-button-label",
       "options-button", "options-screen", "options-heading", "options-back-link", "bgm-volume-label", "se-volume-label", "bgm-volume-input", "se-volume-input", "bgm-volume-value", "se-volume-value", "speed-button", "game-title",
-      "loading-screen", "loading-label", "loading-progress-track", "loading-progress-bar", "loading-progress-percent", "loading-retry-button"
+      "loading-screen", "loading-label", "loading-progress-track", "loading-progress-bar", "loading-progress-percent", "loading-retry-button",
+      "startup-start-screen", "startup-start-button"
     ];
     for (const id of ids) this.dom[this.toCamelCase(id)] = document.getElementById(id);
   }
@@ -958,6 +961,7 @@ export class Game {
   }
 
   bindEvents() {
+    this.dom.startupStartButton.addEventListener("click", () => this.beginFromStartupGate());
     this.dom.startButton.addEventListener("click", () => this.startNewGame());
     this.dom.titleConfigButton.addEventListener("click", () => {
       this.playUiSound("titleConfigSoundEffect");
@@ -984,6 +988,19 @@ export class Game {
       this.playbackClock.setRate(nextRate);
       this.updatePlaybackSpeedButtonLabel();
     });
+  }
+
+  beginFromStartupGate() {
+    if (this.startupStartConsumed || this.dom.startupStartScreen.hidden) return;
+    this.startupStartConsumed = true;
+    this.dom.startupStartButton.disabled = true;
+
+    // Invoke playBgm directly from this click handler so the browser recognizes
+    // the call as a user gesture and permits title music to start.
+    const bgmStart = this.setScreenBgm(this.config.titleScreenBgm);
+    this.dom.startupStartScreen.hidden = true;
+    this.dom.titleScreen.hidden = false;
+    void bgmStart;
   }
 
   returnToTitle() {
